@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APEX — Hands-Free Alpine &amp; Ski Wingman</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            hud: {
+              bg: '#0a0e17',
+              panel: '#111827',
+              card: '#1a2236',
+              border: '#1e3a5f',
+              cyan: '#00e5ff',
+              green: '#39ff14',
+              red: '#ff2d2d',
+              amber: '#ffb300',
+              blue: '#4fc3f7',
+              text: '#c8d6e5',
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-hud-bg text-hud-text font-sans h-screen w-screen overflow-hidden select-none">
+
+  <!-- ─── TOP BAR ─── -->
+  <header class="h-12 flex items-center justify-between px-4 border-b border-hud-border bg-hud-panel/80 backdrop-blur z-50 relative">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-hud-cyan to-hud-green flex items-center justify-center">
+        <i data-lucide="mountain-snow" class="w-5 h-5 text-hud-bg"></i>
+      </div>
+      <span class="font-bold text-lg tracking-wider text-white">APEX</span>
+      <span class="text-xs text-hud-text/60 tracking-widest uppercase ml-1 hidden sm:inline">Hands-Free Alpine Wingman</span>
+    </div>
+    <div class="flex items-center gap-3 text-xs font-mono">
+      <!-- Active Account / Profile Switcher Pill -->
+      <button id="btnSwitchAccount" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-hud-border bg-hud-card/80 hover:border-hud-cyan text-white text-xs transition cursor-pointer" title="Switch Skier Account / Log In">
+        <span class="w-2 h-2 rounded-full bg-hud-green"></span>
+        <span class="text-hud-text/40 hidden md:inline">SKIER:</span>
+        <span id="topBarAccountName" class="font-bold text-white tracking-wide">Benedek</span>
+        <span id="topBarAccountLoc" class="text-[10px] text-hud-cyan hidden lg:inline">@ Glacier Peak</span>
+        <i data-lucide="chevron-down" class="w-3 h-3 text-hud-text/40 ml-0.5"></i>
+      </button>
+
+      <span class="text-hud-green flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-hud-green animate-pulse"></span> LIVE</span>
+      <span id="clockDisplay" class="text-hud-text/50">--:--:--</span>
+      <!-- Gemini API Key (optional) -->
+      <button id="btnApiKey" class="text-hud-text/40 hover:text-hud-cyan transition" title="Paste Gemini API Key">
+        <i data-lucide="key" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── ACCOUNT / SKIER LOGIN MODAL ─── -->
+  <div id="accountModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-6 w-[450px] shadow-2xl relative">
+      <div class="flex items-center justify-between mb-3 border-b border-hud-border pb-2.5">
+        <div>
+          <h3 class="text-white font-bold flex items-center gap-2 text-sm tracking-wide">
+            <i data-lucide="users" class="w-4 h-4 text-hud-green"></i>
+            SQUAD ACCOUNTS & PROFILE LOGIN
+          </h3>
+          <p class="text-[10px] font-mono text-hud-text/50">MOUNT APEX · GPS TRANSCEIVER SQUAD NETWORK</p>
+        </div>
+        <button id="btnCloseAccountModal" class="text-hud-text/40 hover:text-white transition p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-hud-text/70 mb-3 leading-relaxed">
+        Log in as an existing squad operator or register a new skier call sign. The map position and GPS telemetry will immediately bind to your selected skier.
+      </p>
+
+      <!-- Account List -->
+      <div class="text-[10px] font-mono uppercase tracking-wider text-hud-text/40 mb-1.5 flex justify-between">
+        <span>Available Squad Accounts</span>
+        <span class="text-hud-green">● Active GPS</span>
+      </div>
+      <div id="accountsListContainer" class="space-y-1.5 mb-4 max-h-56 overflow-y-auto scrollbar-thin">
+        <!-- Rendered dynamically via app.js -->
+      </div>
+
+      <!-- Custom Account / New Skier Login -->
+      <div class="bg-hud-bg/80 border border-hud-border rounded-lg p-3">
+        <h4 class="text-[10px] font-mono uppercase tracking-wider text-hud-text/50 mb-2 flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5 text-hud-cyan"></i>
+          Log in with Custom Skier Call Sign
+        </h4>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <div>
+            <label class="text-[10px] text-hud-text/50 block mb-1">Call Sign / Name</label>
+            <input id="customAccountName" type="text" placeholder="e.g. Alex, David" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan">
+          </div>
+          <div>
+            <label class="text-[10px] text-hud-text/50 block mb-1">Starting Mountain Sector</label>
+            <select id="customAccountSector" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-hud-cyan font-mono">
+              <option value="glacierPeak">Glacier Peak (3200m)</option>
+              <option value="ridgeDrop">Ridge Drop (2950m)</option>
+              <option value="avalancheChute">Avalanche Chute (2600m)</option>
+              <option value="eagleMid">Eagle Mid-Station (2400m)</option>
+              <option value="panoramaHut">Panorama Hut (2200m)</option>
+              <option value="pineForest">Pine Forest (1950m)</option>
+              <option value="southBowlLift">South Bowl Lift (1800m)</option>
+              <option value="mainValleyBase">Main Valley Base (1500m)</option>
+            </select>
+          </div>
+        </div>
+        <button id="btnLoginCustomAccount" class="w-full py-1.5 text-xs rounded-lg bg-hud-cyan/20 border border-hud-cyan/40 text-hud-cyan hover:bg-hud-cyan/30 font-semibold transition flex items-center justify-center gap-1.5">
+          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+          Log In / Connect Skier GPS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── API KEY MODAL ─── -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-6 w-96 shadow-2xl">
+      <h3 class="text-white font-semibold mb-2 flex items-center gap-2"><i data-lucide="key" class="w-4 h-4 text-hud-cyan"></i> Gemini API Key (Optional)</h3>
+      <p class="text-xs text-hud-text/60 mb-3">Paste a Gemini API key to enable live LLM tool-calling. Leave blank to use the built-in intent router.</p>
+      <input id="geminiKeyInput" type="password" placeholder="AIzaSy..." class="w-full bg-hud-bg border border-hud-border rounded-lg px-3 py-2 text-sm text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan mb-3" />
+      <div class="flex gap-2 justify-end">
+        <button id="btnCancelKey" class="px-3 py-1.5 text-xs rounded-lg border border-hud-border text-hud-text hover:bg-hud-border/30 transition">Cancel</button>
+        <button id="btnSaveKey" class="px-3 py-1.5 text-xs rounded-lg bg-hud-cyan text-hud-bg font-semibold hover:brightness-110 transition">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MAIN CONTENT ─── -->
+  <main class="flex h-[calc(100vh-3rem)]">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         LEFT PANEL — Alpine Sector Map & Live Simulator (60%)
+         ══════════════════════════════════════════════════════════════ -->
+    <section id="mapPanel" class="w-[60%] h-full flex flex-col border-r border-hud-border relative overflow-hidden">
+
+      <!-- Simulator Controls -->
+      <div class="flex items-center gap-2 px-4 py-2 bg-hud-panel/60 border-b border-hud-border flex-shrink-0">
+        <span class="text-[10px] uppercase tracking-widest text-hud-text/40 mr-2 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-3 h-3"></i> Simulator</span>
+        <button data-sim="blizzard" class="sim-btn">
+          <i data-lucide="cloud-snow" class="w-3.5 h-3.5"></i>
+          <span>Blizzard at Peak</span>
+        </button>
+        <button data-sim="liftClosed" class="sim-btn">
+          <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+          <span>Close South Lift</span>
+        </button>
+        <button data-sim="iceBlack" class="sim-btn">
+          <i data-lucide="snowflake" class="w-3.5 h-3.5"></i>
+          <span>Ice on Black Runs</span>
+        </button>
+      </div>
+
+      <!-- SVG Map Container -->
+      <div id="mapContainer" class="flex-1 relative overflow-hidden">
+        <!-- Mountain background gradient -->
+        <div class="absolute inset-0 mountain-bg pointer-events-none"></div>
+        <svg id="skiMap" viewBox="0 0 900 680" class="w-full h-full" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <!-- Glow filters -->
+            <filter id="glowCyan" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feFlood flood-color="#39ff14" flood-opacity="0.4" result="glow"/>
+              <feComposite in="glow" in2="blur" operator="in" result="glowIn"/>
+              <feMerge><feMergeNode in="glowIn"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+            </filter>
+            <!-- Route highlight gradient -->
+            <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e5ff"/>
+              <stop offset="100%" stop-color="#39ff14"/>
+            </linearGradient>
+            <!-- Marker for lift lines -->
+            <marker id="liftArrow" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="4" markerHeight="4">
+              <circle cx="3" cy="3" r="2.5" fill="#888"/>
+            </marker>
+          </defs>
+
+          <!-- Mountain silhouette background -->
+          <polygon points="0,680 50,500 150,380 250,200 350,120 450,60 550,90 620,180 700,250 780,340 850,420 900,500 900,680"
+                   fill="url(#mountainFill)" opacity="0.15"/>
+          <linearGradient id="mountainFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1e3a5f"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </linearGradient>
+
+          <!-- Grid lines (subtle) -->
+          <g class="grid-lines" stroke="#1e3a5f" stroke-width="0.5" opacity="0.3">
+            <line x1="0" y1="100" x2="900" y2="100"/>
+            <line x1="0" y1="200" x2="900" y2="200"/>
+            <line x1="0" y1="300" x2="900" y2="300"/>
+            <line x1="0" y1="400" x2="900" y2="400"/>
+            <line x1="0" y1="500" x2="900" y2="500"/>
+            <line x1="0" y1="600" x2="900" y2="600"/>
+          </g>
+
+          <!-- Altitude labels -->
+          <g class="altitude-labels" fill="#1e3a5f" font-size="10" font-family="JetBrains Mono, monospace">
+            <text x="870" y="95">3200m</text>
+            <text x="870" y="195">2800m</text>
+            <text x="870" y="295">2400m</text>
+            <text x="870" y="395">2000m</text>
+            <text x="870" y="495">1600m</text>
+            <text x="870" y="595">1200m</text>
+          </g>
+
+          <!-- ═══ SKI RUNS & LIFTS (edges) ═══ -->
+          <g id="edgesGroup"></g>
+
+          <!-- ═══ ROUTE HIGHLIGHT LAYER ═══ -->
+          <g id="routeHighlight"></g>
+
+          <!-- ═══ NODES (stations) ═══ -->
+          <g id="nodesGroup"></g>
+
+          <!-- ═══ SQUAD MEMBER DOTS ═══ -->
+          <g id="squadGroup"></g>
+        </svg>
+
+        <!-- Map legend -->
+        <div class="absolute bottom-3 left-3 bg-hud-bg/80 backdrop-blur border border-hud-border rounded-lg px-3 py-2 text-[10px] font-mono flex gap-4">
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-blue-400 inline-block rounded"></span> Blue / Easy</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-red-500 inline-block rounded"></span> Red / Intermediate</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-gray-100 inline-block rounded"></span> Black / Expert</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 border-t border-dashed border-yellow-400 inline-block"></span> Gondola / Lift</span>
+        </div>
+
+        <!-- Blizzard overlay -->
+        <div id="blizzardOverlay" class="hidden absolute inset-0 pointer-events-none blizzard-overlay"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         RIGHT PANEL — Helmet Visor HUD & Voice AI Agent (40%)
+         ══════════════════════════════════════════════════════════════ -->
+    <section id="hudPanel" class="w-[40%] h-full flex flex-col bg-hud-panel/50 relative overflow-hidden">
+
+      <!-- HUD Title -->
+      <div class="px-4 pt-3 pb-2 border-b border-hud-border flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-white tracking-wider flex items-center gap-2">
+              <i data-lucide="radio" class="w-4 h-4 text-hud-cyan"></i>
+              HELMET VISOR HUD
+            </h2>
+            <p class="text-[10px] text-hud-text/40 font-mono mt-0.5">MOUNT APEX · 3,200 m · SECTOR ALPHA</p>
+          </div>
+          <div class="flex items-center gap-1 text-[10px] font-mono text-hud-text/50">
+            <i data-lucide="signal" class="w-3 h-3 text-hud-green"></i> COMMS OK
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable HUD content -->
+      <div id="hudContent" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin">
+
+        <!-- ─── Navigation Card ─── -->
+        <div id="navCard" class="hud-card hidden">
+          <div class="hud-card-header">
+            <i data-lucide="navigation" class="w-3.5 h-3.5 text-hud-cyan"></i>
+            <span>ACTIVE NAVIGATION</span>
+          </div>
+          <div id="navCardBody" class="hud-card-body">
+            <p class="text-hud-text/40 text-xs italic">No active route.</p>
+          </div>
+        </div>
+
+        <!-- ─── Squad Comms Card ─── -->
+        <div id="squadCard" class="hud-card hidden">
+          <div class="hud-card-header">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-hud-green"></i>
+            <span>SQUAD COMMS</span>
+          </div>
+          <div id="squadCardBody" class="hud-card-body">
+            <p class="text-hud-text/40 text-xs italic">No messages.</p>
+          </div>
+        </div>
+
+        <!-- ─── Mountain Telemetry Card ─── -->
+        <div id="telemetryCard" class="hud-card">
+          <div class="hud-card-header">
+            <i data-lucide="thermometer" class="w-3.5 h-3.5 text-hud-amber"></i>
+            <span>MOUNTAIN TELEMETRY</span>
+          </div>
+          <div id="telemetryCardBody" class="hud-card-body">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-hud-text/50">Wind</span><span id="telWind" class="text-white">12 km/h NW</span></div>
+              <div class="flex justify-between"><span class="text-hud-text/50">Temp</span><span id="telTemp" class="text-hud-blue">-8 °C</span></div>
+              <div class="flex justify-between"><span class="text-hud-text/50">Visibility</span><span id="telVis" class="text-hud-green">Good</span></div>
+              <div class="flex justify-between"><span class="text-hud-text/50">Snow</span><span id="telSnow" class="text-white">Packed Powder</span></div>
+              <div class="flex justify-between col-span-2"><span class="text-hud-text/50">South Bowl Lift</span><span id="telLift" class="text-hud-green">● Open</span></div>
+              <div class="flex justify-between col-span-2"><span class="text-hud-text/50">Black Run Ice</span><span id="telIce" class="text-hud-green">● Clear</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Emergency SOS Card (hidden by default) ─── -->
+        <div id="sosCard" class="hud-card hidden border-red-600/60">
+          <div class="hud-card-header bg-red-900/40 text-red-400">
+            <i data-lucide="siren" class="w-3.5 h-3.5"></i>
+            <span>⚠ EMERGENCY SOS ACTIVE</span>
+          </div>
+          <div id="sosCardBody" class="hud-card-body bg-red-950/20">
+          </div>
+        </div>
+
+        <!-- ─── Voice Transcript Log ─── -->
+        <div class="hud-card flex-1">
+          <div class="hud-card-header">
+            <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-hud-text/60"></i>
+            <span>AI TRANSCRIPT</span>
+          </div>
+          <div id="transcriptLog" class="hud-card-body space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+            <div class="text-[11px] text-hud-text/30 italic">Waiting for voice input…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Quick Demo Prompts ─── -->
+      <div class="px-4 py-2 border-t border-hud-border flex-shrink-0 bg-hud-panel/60">
+        <p class="text-[9px] uppercase tracking-widest text-hud-text/30 mb-1.5">Quick Demo Prompts</p>
+        <div class="flex flex-wrap gap-1.5">
+          <button class="demo-chip" data-prompt="Where is Kajti?">📍 Where is Kajti?</button>
+          <button class="demo-chip" data-prompt="Where is Renato?">📍 Where is Renato?</button>
+          <button class="demo-chip" data-prompt="Where is Ski Patrol?">⛑️ Where is Patrol?</button>
+          <button class="demo-chip" data-prompt="How do I get to Kajti?">⛷️ Route to Kajti</button>
+          <button class="demo-chip" data-prompt="How do I get to Renato?">⛷️ Route to Renato</button>
+          <button class="demo-chip" data-prompt="Tell Renato and Kajti I'm taking the blue trail down, meet me at the hut in 15 minutes.">📻 Ping Squad</button>
+          <button class="demo-chip" data-prompt="Check conditions">🏔️ Check Conditions</button>
+          <button class="demo-chip" data-prompt="MAYDAY! I crashed off-piste near Avalanche Chute, twisted my knee, need Ski Patrol!">🆘 SOS Mayday</button>
+        </div>
+      </div>
+
+      <!-- ─── Text Input Fallback ─── -->
+      <div class="px-4 py-2 border-t border-hud-border flex-shrink-0 bg-hud-bg/60">
+        <div class="flex gap-2">
+          <input id="textInput" type="text" placeholder="Type a command…" class="flex-1 bg-hud-card border border-hud-border rounded-lg px-3 py-2 text-sm text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan transition" />
+          <button id="btnSendText" class="px-3 py-2 bg-hud-cyan/20 border border-hud-cyan/40 rounded-lg text-hud-cyan hover:bg-hud-cyan/30 transition">
+            <i data-lucide="send" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Push-to-Talk + Waveform ─── -->
+      <div class="px-4 py-3 border-t border-hud-border flex-shrink-0 bg-hud-panel/80">
+        <div class="flex items-center gap-3">
+          <button id="btnMic" class="mic-btn group" title="Push to Talk">
+            <i data-lucide="mic" class="w-6 h-6 text-white group-hover:text-hud-cyan transition"></i>
+          </button>
+          <div class="flex-1">
+            <div id="waveform" class="waveform-container">
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+              <div class="wave-bar"></div><div class="wave-bar"></div>
+            </div>
+            <p id="micStatus" class="text-[10px] font-mono text-hud-text/40 mt-1">TAP TO TALK · or use prompts above</p>
+          </div>
+          <div id="speakerIndicator" class="hidden">
+            <i data-lucide="volume-2" class="w-5 h-5 text-hud-cyan animate-pulse"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts (order matters) -->
+  <script src="mountain-data.js"></script>
+  <script src="voice-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
