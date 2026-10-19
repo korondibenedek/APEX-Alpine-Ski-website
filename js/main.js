@@ -52,11 +52,13 @@ const telIce  = $('#telIce');
 const telemetryElements = { telWind, telTemp, telVis, telSnow, telLift, telIce };
 
 // API Key modal
-const apiKeyModal   = $('#apiKeyModal');
-const btnApiKey     = $('#btnApiKey');
-const btnCancelKey  = $('#btnCancelKey');
-const btnSaveKey    = $('#btnSaveKey');
-const geminiKeyInput = $('#geminiKeyInput');
+const apiKeyModal      = $('#apiKeyModal');
+const btnApiKey        = $('#btnApiKey');
+const btnCloseKeyModal = $('#btnCloseKeyModal');
+const btnCancelKey     = $('#btnCancelKey');
+const btnSaveKey       = $('#btnSaveKey');
+const geminiKeyInput   = $('#geminiKeyInput');
+const groqKeyInput     = $('#groqKeyInput');
 
 // Account modal & switcher
 const btnSwitchAccount      = $('#btnSwitchAccount');
@@ -197,8 +199,8 @@ function showSquadMemberCard(entity) {
           <span class="text-hud-green font-medium">${entity.status}</span>
         </div>
         <div class="flex justify-between items-center">
-          <span class="text-hud-text/60">Squad Radio Link:</span>
-          <span class="text-hud-cyan font-mono text-[10px]">CH-04 · 100% SIGNAL</span>
+          <span class="text-hud-text/60">Squad Voice Link:</span>
+          <span class="text-hud-cyan font-mono text-[10px]">VOICE NET · ONLINE</span>
         </div>
       </div>
     </div>
@@ -264,7 +266,7 @@ async function handlePingSquad(args) {
     sender: activeUser.name,
     role: activeUser.role,
     avatar: activeUser.avatar || '⛷️',
-    channel: 'CH-04 · 146.520 MHz FM',
+    channel: 'Squad Voice Net',
     recipients,
     text: cleanText,
     autoSpeak: false
@@ -284,9 +286,9 @@ async function handlePingSquad(args) {
   let resp = '';
   const etaText = args.eta ? `, ETA ${args.eta} minutes` : '';
   if (isBroadcast) {
-    resp = `Roger, broadcasting to all squad units on Channel 4: "${spokenBody}"${etaText}.`;
+    resp = `Roger, broadcasting to all squad units: "${spokenBody}"${etaText}.`;
   } else {
-    resp = `Roger, radio transmission sent to ${recipients.join(' and ')}: "${spokenBody}"${etaText}.`;
+    resp = `Roger, message sent to ${recipients.join(' and ')}: "${spokenBody}"${etaText}.`;
   }
 
   addTranscript(transcriptLog, 'ai', resp);
@@ -358,7 +360,7 @@ async function handlePingSquad(args) {
         sender: primaryRecip,
         role: 'Squad Member',
         avatar: '🎿',
-        text: `Copy that, ${activeUser.name}. This is ${primaryRecip} on Channel 4 loud and clear. See you on the snow. Over.`
+        text: `Copy that, ${activeUser.name}. This is ${primaryRecip} copying loud and clear. See you on the snow. Over.`
       };
     }
 
@@ -367,7 +369,7 @@ async function handlePingSquad(args) {
       sender: reply.sender,
       role: reply.role,
       avatar: reply.avatar,
-      channel: 'CH-04 · 146.520 MHz FM',
+      channel: 'Squad Voice Net',
       recipients: [activeUser.name],
       text: reply.text,
       autoSpeak: true
@@ -502,11 +504,11 @@ async function handleCreateProfile(autoLogin = false) {
     accountModal?.classList.add('hidden');
     clearRouteHighlight(routeHL);
     addTranscript(transcriptLog, 'system', `👤 Operator switched: ${created.name} (${created.role}) @ ${locName}`);
-    await aiSpeak(`Operator switched. Welcome ${created.name}. Radio channel synchronized at ${locName}.`);
+    await aiSpeak(`Operator switched. Welcome ${created.name}. Voice channel synchronized at ${locName}.`);
   } else {
     flashMapNode(created.location, created.color);
     addTranscript(transcriptLog, 'system', `➕ New squad operator linked: ${created.name} (${created.role}) stationed at ${locName}`);
-    await aiSpeak(`${created.name} added to squad transceiver network at ${locName}. Radio frequency synchronized.`);
+    await aiSpeak(`${created.name} added to squad voice network at ${locName}. Voice link online.`);
   }
 }
 
@@ -522,7 +524,7 @@ async function handleSwitchAccount(accId) {
 
   const locName = nodes[newActive.location]?.name || 'Mount Apex';
   addTranscript(transcriptLog, 'system', `👤 Operator switched: ${newActive.name} (${newActive.role}) @ ${locName}`);
-  await aiSpeak(`Operator switched. Welcome ${newActive.name}. Radio channel synchronized at ${locName}.`);
+  await aiSpeak(`Operator switched. Welcome ${newActive.name}. Voice channel synchronized at ${locName}.`);
 }
 
 function handleDeleteProfile(accId) {
@@ -648,17 +650,30 @@ function initUI() {
   btnApiKey?.addEventListener('click', () => {
     apiKeyModal?.classList.remove('hidden');
     if (geminiKeyInput) geminiKeyInput.value = VoiceEngine.geminiApiKey || '';
+    if (groqKeyInput) groqKeyInput.value = VoiceEngine.groqApiKey || '';
+    initIcons();
+  });
+  btnCloseKeyModal?.addEventListener('click', () => {
+    apiKeyModal?.classList.add('hidden');
   });
   btnCancelKey?.addEventListener('click', () => {
     apiKeyModal?.classList.add('hidden');
   });
   btnSaveKey?.addEventListener('click', () => {
-    VoiceEngine.geminiApiKey = (geminiKeyInput?.value || '').trim();
+    const gemKey = (geminiKeyInput?.value || '').trim();
+    const groqKey = (groqKeyInput?.value || '').trim();
+    VoiceEngine.geminiApiKey = gemKey;
+    VoiceEngine.groqApiKey = groqKey;
     apiKeyModal?.classList.add('hidden');
-    if (VoiceEngine.geminiApiKey) {
-      addTranscript(transcriptLog, 'system', '🔑 Gemini API key set — LLM tool-calling enabled.');
+
+    if (groqKey && gemKey) {
+      addTranscript(transcriptLog, 'system', '⚡ Groq Whisper Turbo & ✨ Gemini 2.0 active — ultra-fast speech recognition and multimodal tool-calling enabled.');
+    } else if (groqKey) {
+      addTranscript(transcriptLog, 'system', '⚡ Groq Whisper Large v3 Turbo active — 150ms speech-to-text with local tactical intent router.');
+    } else if (gemKey) {
+      addTranscript(transcriptLog, 'system', '✨ Gemini 2.0 Flash Multimodal Audio active — direct helmet audio streaming & LLM tool-calling enabled.');
     } else {
-      addTranscript(transcriptLog, 'system', '🔑 Gemini API key cleared — using built-in intent router.');
+      addTranscript(transcriptLog, 'system', '🛡️ Offline Mode active — browser Web Speech & built-in local intent router.');
     }
   });
   apiKeyModal?.addEventListener('click', (e) => {
@@ -700,7 +715,7 @@ export function boot() {
   setTimeout(() => {
     const active = getActiveAccount();
     const locName = nodes[active.location]?.name || 'Glacier Peak';
-    addTranscript(transcriptLog, 'ai', `🏔️ APEX online. Mount Apex, 3200 meters. Operator: ${active.name} at ${locName}. Squad transceivers linked. What's the play, rider?`);
+    addTranscript(transcriptLog, 'ai', `🏔️ APEX online. Mount Apex, 3200 meters. Operator: ${active.name} at ${locName}. Squad voice network online. What's the play, rider?`);
   }, 500);
 }
 

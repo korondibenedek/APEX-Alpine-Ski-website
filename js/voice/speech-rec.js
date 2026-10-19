@@ -157,6 +157,27 @@ function stopWaveformViz() {
   });
 }
 
+let _mediaRecorder = null;
+let _recordedAudioChunks = [];
+let _currentAudioMimeType = '';
+
+export function getSupportedAudioMimeType() {
+  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') return '';
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+    'audio/wav'
+  ];
+  for (const c of candidates) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) {
+      return c;
+    }
+  }
+  return '';
+}
+
 export async function startListening() {
   if (isListening) return;
   if (isSpeaking()) cancelSpeech();
@@ -164,13 +185,27 @@ export async function startListening() {
   _sessionTranscript = '';
   clearTimeout(_silenceTimer);
   _silenceTimer = null;
+  _recordedAudioChunks = [];
 
   if (!recognition) initRecognition();
-  if (!recognition) return;
 
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     startWaveformViz(micStream);
+
+    _currentAudioMimeType = getSupportedAudioMimeType();
+    try {
+      _mediaRecorder = new MediaRecorder(micStream, _currentAudioMimeType ? { mimeType: _currentAudioMimeType } : undefined);
+      _mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          _recordedAudioChunks.push(e.data);
+        }
+      };
+      _mediaRecorder.start(100);
+    } catch (mrErr) {
+      console.warn('MediaRecorder not available or failed:', mrErr);
+      _mediaRecorder = null;
+    }
   } catch (err) {
     console.warn('Microphone access denied:', err);
   }
@@ -180,7 +215,7 @@ export async function startListening() {
   if (_onListeningChange) _onListeningChange(true);
 
   try {
-    recognition.start();
+    recognition?.start();
   } catch (e) {}
 }
 
@@ -192,6 +227,11 @@ export function stopListening() {
   _silenceTimer = null;
 
   try { recognition?.stop(); } catch (e) {}
+
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    try { _mediaRecorder.stop(); } catch (e) {}
+  }
+
   if (micStream) {
     micStream.getTracks().forEach(t => t.stop());
     micStream = null;
@@ -208,9 +248,14 @@ export function finishRecordingAndSubmit() {
   const spokenText = _sessionTranscript.trim();
   _sessionTranscript = '';
 
+  const chunks = [..._recordedAudioChunks];
+  _recordedAudioChunks = [];
+  const mimeType = _currentAudioMimeType || 'audio/webm';
+  const audioBlob = chunks.length > 0 ? new Blob(chunks, { type: mimeType }) : null;
+
   stopListening();
 
-  if (!spokenText) {
+  if (!spokenText && (!audioBlob || audioBlob.size < 500)) {
     const micSt = document.getElementById('micStatus');
     if (micSt) micSt.textContent = 'No speech detected · Tap to talk';
     setTimeout(() => {
@@ -221,12 +266,21 @@ export function finishRecordingAndSubmit() {
     return;
   }
 
-  if (isEchoOfAI(spokenText)) {
+  if (spokenText && isEchoOfAI(spokenText)) {
     return;
   }
 
-  if (_onTranscript) _onTranscript(spokenText);
-  if (_processInputFn) _processInputFn(spokenText);
+  const payload = {
+    text: spokenText,
+    audioBlob,
+    mimeType
+  };
+
+  if (_processInputFn) {
+    _processInputFn(payload);
+  } else if (_onTranscript && spokenText) {
+    _onTranscript(spokenText);
+  }
 }
 
 export function toggleListening() {

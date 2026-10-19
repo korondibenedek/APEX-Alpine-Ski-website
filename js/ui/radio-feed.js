@@ -108,18 +108,18 @@ export function renderRadioFeed(radioFeed, elements = {}) {
   });
 
   if (radioMsgCount) {
-    radioMsgCount.textContent = `${filtered.length} TRANSMISSION${filtered.length === 1 ? '' : 'S'}`;
+    radioMsgCount.textContent = `${filtered.length} MESSAGE${filtered.length === 1 ? '' : 'S'}`;
   }
 
   if (filtered.length === 0) {
     radioFeed.innerHTML = `
       <div class="py-8 px-4 text-center text-xs font-mono text-hud-text/40 border border-dashed border-hud-border/40 rounded-xl space-y-1.5">
         <i data-lucide="radio" class="w-6 h-6 mx-auto mb-2 text-hud-text/30"></i>
-        <div class="text-white/80 font-semibold tracking-wider uppercase">NO TRANSMISSIONS LOGGED</div>
+        <div class="text-white/80 font-semibold tracking-wider uppercase">NO MESSAGES LOGGED</div>
         <div class="text-[10px] text-hud-text/40">
           ${_activeRadioChannel === 'all'
-            ? 'Transceiver standing by. Use the quick prompts or microphone to transmit.'
-            : `Target frequency for ${_activeRadioChannel} is clear. Direct transmissions will log here.`}
+            ? 'Squad voice network online. Use the quick prompts or microphone to talk.'
+            : `Channel for ${_activeRadioChannel} is clear. Direct messages will log here.`}
         </div>
       </div>
     `;
@@ -198,7 +198,7 @@ export function addRadioMessage({
   sender = 'Renato',
   role = 'Snowboarder',
   avatar = '🏂',
-  channel = 'CH-04 · 146.520 MHz FM',
+  channel = 'Squad Voice Net',
   recipients = ['All Squad'],
   text = '',
   autoSpeak = false

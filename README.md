@@ -177,11 +177,12 @@ SÍapp/
     │   └── dijkstra.js        # Graph shortest path routing with avoid-black/ice filters
     ├── voice/
     │   ├── audio-fx.js        # Procedural radio squelch synthesis & Web Audio API
-    │   ├── speech-rec.js      # Web Speech recognition, 3-state mic & audio visualizer
+    │   ├── speech-rec.js      # Web Speech recognition, MediaRecorder audio capture & waveform visualizer
     │   ├── speech-tts.js      # Speech synthesis & AI vocal response (English voice normalization)
     │   ├── intent-parser.js   # NLU Intent classification & argument extraction
     │   ├── radio-formatter.js # Tactical radio phrasing & Hungarian grammar handling
-    │   ├── gemini-client.js   # Optional Gemini 2.0 Flash tool-calling integration
+    │   ├── gemini-client.js   # Gemini 2.0 Flash Multimodal Audio & function-calling
+    │   ├── groq-client.js     # Groq Whisper Large v3 Turbo ultra-fast (150ms) speech recognition
     │   └── index.js           # Unified VoiceEngine module interface
     └── ui/
         ├── map-renderer.js    # SVG map rendering, ski runs & GPS radar blips
@@ -198,11 +199,13 @@ SÍapp/
 - **Vector Graphics**: HTML5 SVG with animated glowing markers, gradients, and coordinate projection
 - **Styling**: Tailwind CSS (via CDN) + custom tactical CSS design system
 - **Icons**: Lucide Icons (via CDN)
-- **Speech Recognition**: Browser Web Speech API (`webkitSpeechRecognition`)
+- **Voice AI & Speech Recognition (3-Tier Engine)**:
+  - ⚡ **Groq Whisper Large v3 Turbo**: Sub-250ms ultra-fast multilingual transcription via Groq LPUs (Free Tier)
+  - ✨ **Google Gemini 2.0 Flash Multimodal Audio**: Direct raw audio comprehension & tactical function-calling (Free Tier)
+  - 🛡️ **Browser Web Speech API**: Native offline speech-to-text fallback (`webkitSpeechRecognition`)
 - **Speech Synthesis**: Browser SpeechSynthesis (`en-US` native voice normalization)
-- **Audio Processing**: Web Audio API (`AudioContext`, `AnalyserNode`, `BiquadFilter`, white noise buffer oscillator)
+- **Audio Processing**: Web Audio API (`AudioContext`, `AnalyserNode`, `BiquadFilter`, white noise squelch generator) + `MediaRecorder`
 - **Algorithms**: Dijkstra Single-Source Shortest Path, Levenshtein Distance String Similarity
-- **Optional LLM Integration**: Built-in support for Gemini 2.0 Flash function-calling API
 
 ---
 

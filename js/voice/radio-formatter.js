@@ -12,12 +12,12 @@ export function formatRadioMessage(rawText, recipients = [], eta = null) {
   const isBroadcast = recipients.some(r => /all|everyone|everybody|squad/i.test(r));
   const targetName = isBroadcast ? 'all squad units' : recipients.join(' & ');
 
-  // 0. If payload is empty or only contains trigger words (e.g. user just said "send a radio message" or "radio check")
-  if (!text || /^(?:check|radio\s+check|send\s+(?:a\s+)?(?:radio\s+)?message|radio\s+message|radio|message|üzenet|rádióüzenet)$/i.test(text)) {
+  // 0. If payload is empty or only contains trigger words (e.g. user just said "send a message" or "check")
+  if (!text || /^(?:check|radio\s+check|comms?\s+check|send\s+(?:a\s+)?(?:radio\s+)?message|radio\s+message|radio|message|üzenet|rádióüzenet)$/i.test(text)) {
     if (isBroadcast) {
-      return `Squad radio check. Transceiver online, telemetry operational. Standing by. Over.`;
+      return `Squad comms check. Voice network online, telemetry operational. Standing by. Over.`;
     } else {
-      return `Radio check for ${targetName}. Transceiver online, standing by for traffic. Over.`;
+      return `Comms check for ${targetName}. Voice link online, standing by. Over.`;
     }
   }
 
@@ -44,45 +44,46 @@ export function formatRadioMessage(rawText, recipients = [], eta = null) {
   // 3. ETA phrasing
   const etaEn = eta ? ` ETA ~${eta} min.` : '';
 
-  // 4. Hazard alert (checked first so "ice near hut" or "watch out" takes precedence)
-  if (/ice|icy|jeg|jég|wind|szél|szel|fog|köd|kod|caution|vigyáz|vigyazz|hazard|watch out|look out/i.test(lower)) {
+  // 4. Hazard alert shorthand (only for terse phrases like "hazard", "ice alert")
+  if (/^(?:caution|hazard|watch out|look out|vigyázz|vigyazz|ice|icy|jég|fog|köd)(?:\s+near\s+[a-z\s]+)?$/i.test(lower)) {
     const destStrEn = targetNodeNameEn ? ` near ${targetNodeNameEn}` : '';
-    return `Caution to all squad units: Hazard and icy surface reported${destStrEn}. Reduce speed and stay visible. Over.`;
+    const alertTarget = isBroadcast ? 'all squad units' : targetName;
+    return `Caution to ${alertTarget}: Hazard and icy surface reported${destStrEn}. Reduce speed and stay visible. Over.`;
   }
 
-  // 5. Check for Rendezvous / Meeting at station
-  if (/meet|találkoz|talalkoz|rendezvous|várj|varj|waiting|see you|\bhuts?\b|hütt|hutte|\bstations?\b|állomás|allomas|lodge/i.test(lower) && targetNodeNameEn) {
+  // 5. Check for concise rendezvous shorthand (e.g. "meet at panorama hut")
+  if (/^(?:meet|rendezvous|találkozzunk)(?:\s+at|\s+near)?(?:\s+[a-z\s]+)?$/i.test(lower) && targetNodeNameEn) {
     const trailPhraseEn = trailEn ? ` Descending via ${trailEn}.` : '';
     return `Squad rendezvous at ${targetNodeNameEn}.${trailPhraseEn}${etaEn} Over.`;
   }
 
-  // 6. Check for taking trail / descending
-  if (trailEn || /taking|heading|going down|ereszked|csúsz|csusz|megyek|jövök|jovok|tartok/i.test(lower)) {
+  // 6. Check for taking trail / descending shorthand
+  if (/^(?:taking|heading|going down|ereszkedek|csúszok|megyek|jövök)\s+(?:the\s+)?(?:blue|red|black)\b/i.test(lower)) {
     const trailStrEn = trailEn || 'the marked run';
     const destStrEn = targetNodeNameEn ? ` towards ${targetNodeNameEn}` : '';
     return `Descending via ${trailStrEn}${destStrEn}.${etaEn} Proceeding with caution. Over.`;
   }
 
-  // 7. Status check / check-in
-  if (/status|helyzet|hol vagytok|where are|ready|kész|kesz|radio check/i.test(lower)) {
-    return `Squad radio check. Transceiver online, telemetry operational. Standing by for position report. Over.`;
+  // 7. Status check / check-in shorthand
+  if (/^(?:status|helyzet|hol vagytok|where are you|ready|kész|kesz|radio check|comms?\s+check)\.?$/i.test(lower)) {
+    return `Squad comms check. Voice network online, telemetry operational. Standing by for position report. Over.`;
   }
 
-  // 8. General clean-up fallback
+  // 8. General clean-up fallback (preserves user's actual transmission verbatim)
   let clean = text;
   clean = clean
-    .replace(/^(?:please\s+)?(?:send\s+(?:a\s+)?(?:radio\s+)?message(?:\s+to)?|send\s+radio(?:\s+to)?|radio(?:\s+to)?|tell|ping(?:\s+squad)?|message|notify)\s*/i, '')
+    .replace(/^(?:please\s+)?(?:send\s+(?:a\s+|an\s+|the\s+)?(?:radio\s+)?message(?:\s+to)?|send\s+radio(?:\s+to)?|radio(?:\s+to)?|tell|ping(?:\s+squad)?|message|notify)\s*/i, '')
     .replace(/^(?:kérlek\s+)?(?:küldj\s+(?:egy\s+)?(?:rádió)?üzenetet|küldj\s+rádióüzenetet|rádiózz|mondd\s+meg|szólj|üzend\s+meg|üzenj)\s*/i, '')
     .trim();
 
   // Strip trailing over/vétel if user already said it
   clean = clean.replace(/\s*\b(over|vétel|vetel)\b\.?\s*$/gi, '').trim();
 
-  if (!clean || /^(?:check|radio\s+check|send\s+(?:a\s+)?(?:radio\s+)?message|radio\s+message|radio|message)$/i.test(clean)) {
+  if (!clean || /^(?:check|radio\s+check|comms?\s+check|send\s+(?:a\s+)?(?:radio\s+)?message|radio\s+message|radio|message)$/i.test(clean)) {
     if (isBroadcast) {
-      return `Squad radio check. Transceiver online, telemetry operational. Standing by. Over.`;
+      return `Squad comms check. Voice network online, telemetry operational. Standing by. Over.`;
     } else {
-      return `Radio check for ${targetName}. Transceiver online, standing by for traffic. Over.`;
+      return `Comms check for ${targetName}. Voice link online, standing by. Over.`;
     }
   }
 

@@ -9,58 +9,81 @@ import { resolveNodeName, matchBestPerson } from '../data/fuzzy-matcher.js';
 // Classify voice intent from spoken transcript
 export function classifyIntent(text) {
   const lower = (text || '').toLowerCase().trim();
+  if (!lower) return 'unknown';
 
-  // Emergency SOS / MAYDAY (highest priority)
-  const isExplicitDistress = /\b(mayday\s*mayday|mayday|sos|emergency\s*beacon|call\s*ski\s*patrol|need\s*ski\s*patrol|send\s*ski\s*patrol|send\s*rescue|need\s*rescue|medical\s*emergency)\b/i.test(lower);
+  // 1. Clear SOS / Dismiss beacon
+  if (/\b(cancel\s*sos|clear\s*sos|dismiss\s*sos|dismiss\s*emergency|false\s*alarm|i'?m\s*fine|i'?m\s*ok|minden\s*rendben)\b/i.test(lower)) {
+    return 'clearSOS';
+  }
+
+  // 2. Emergency SOS / MAYDAY (highest priority for genuine distress)
+  // Ensure "send a message to ski patrol" or "radio ski patrol" is NOT treated as an SOS crash
+  const isRadioMessage = /\b(send\s+(?:a\s+|an\s+|the\s+)?(?:radio\s+)?message|send\s+radio|send\s+message|message|radio|tell|küldj\s+(?:egy\s+)?(?:rádió)?üzenetet)\b/i.test(lower);
+  const hasGenuineEmergency = /\b(mayday|emergency|crash|crashed|injured|injury|broken|broke|twisted|bleeding|rescue|help\s*me)\b/i.test(lower);
+
+  const isExplicitDistress = /\b(mayday\s*mayday|mayday|sos|emergency\s*beacon|medical\s*emergency)\b/i.test(lower) ||
+    (!isRadioMessage && /\b(call\s*ski\s*patrol|need\s*ski\s*patrol|send\s*ski\s*patrol|send\s*rescue|need\s*rescue)\b/i.test(lower));
   const isSevereInjury = /\b(i\s*crashed|crashed\s*off|broke\s*my|twisted\s*my|twisted\s*knee|severe\s*injury|serious\s*injury)\b/i.test(lower);
   const isEmergencyHelp = /\b(send\s*help|need\s*help|help\s*me)\b/i.test(lower) && /\b(patrol|rescue|crash|crashed|injured|bleeding|broken|chute)\b/i.test(lower);
 
-  if (isExplicitDistress || isSevereInjury || isEmergencyHelp) {
+  if ((isExplicitDistress || isSevereInjury || isEmergencyHelp) && (!isRadioMessage || hasGenuineEmergency)) {
     return 'triggerSOS';
   }
 
-  // Conditions / Weather / Lift Status check
-  if (/\b(conditions?|weather|winds?|visibility|lifts?|open|closed|status|snow|ice|icy|temperature|temp|blizzard|forecast|telemetry|időjárás|viszonyok|hóhelyzet)\b/i.test(lower)) {
-    return 'checkConditions';
-  }
+  // 3. Squad Comms / Radio Message Dispatch (high priority)
+  // Any phrase starting with "send a message", "tell", "radio", etc. or dispatching a message
+  // MUST immediately return pingSquad. It must NEVER trigger locateEntity, checkConditions, or planSkiRoute!
+  const isMessageDispatch =
+    /^(?:please\s+)?(?:send\s+(?:a\s+|an\s+|the\s+|any\s+)?(?:radio\s+)?message|send\s+radio|send\s+message|radio\b|tell\b|message\b|ping\b|notify\b|inform\b|küldj\b|szólj\b|üzend\b)/i.test(lower) ||
+    /\b(send\s+(?:a\s+|an\s+|the\s+|any\s+)?(?:radio\s+)?message|send\s+message|radio\s+message|radio\s+check|ping\s*squad|message\s*squad|radio\s*squad)\b/i.test(lower) ||
+    /\b(küldj\s+(?:egy\s+)?(?:rádió)?üzenetet|küldj\s+üzenetet|küldj\s+rádióüzenetet|küldj\s+rádiót|rádiózz)\b/i.test(lower);
 
-  if (/\b(check|how('s| is| are)|what('s| is| are)|report)\b/i.test(lower) && /\b(mountain|sector|peak|base|summit|run|slope)\b/i.test(lower)) {
-    return 'checkConditions';
-  }
-
-  // Locate / Where is / Find query
-  if (/\b(where\s*(is|are|am)|locate|find|position\s*of|who\s*is\s*at|hol\s*van)\b/i.test(lower)) {
-    return 'locateEntity';
-  }
-
-  // Squad comms (explicit radio / message sending)
-  if (/\b(tell|radio|ping\s*squad|message\s*squad|notify|send\s*message|üzenet|mondd|szólj|üzend)\b/i.test(lower)) {
+  if (isMessageDispatch) {
     return 'pingSquad';
   }
 
-  // Route planning
-  if (/\b(route|navigate|take\s*me|go\s*to|get\s*to|how\s*(do\s*i|doi\s*i|can\s*i|to)\s*(get|reach|go|ski)|way\s*to|path\s*to|guide\s*me|direction|avoid|lead\s*me|head\s*to|ski\s*to|interception|útvonal|vigyél|menjünk)\b/i.test(lower)) {
+  // 4. Route planning (evaluated before general conditions so "route avoiding ice" routes)
+  if (/\b(route|navigate|take\s*me|go\s*to|get\s*to|how\s*(?:do\s*i|doi\s*i|can\s*i|to)\s*(?:get|reach|go|ski)|way\s*to|path\s*to|guide\s*me|direction|avoid|lead\s*me|head\s*to|ski\s*to|interception|útvonal|vigyél|menjünk)\b/i.test(lower)) {
     return 'planSkiRoute';
   }
 
+  // 5. Conditions / Weather / Lift Status check
+  // Matches explicit inquiries about weather, snow conditions, blizzards, wind, lifts, or telemetry
+  const isWeatherInquiry =
+    /\b(check|how('s| is| are)|what('s| is| are)|report|tell\s+me\s+about|info\s+(?:on|about)|show)\b.*\b(conditions?|weather|winds?|visibility|lifts?|snow|ice|icy|temperature|temp|blizzard|telemetry|forecast|időjárás|viszonyok|hóhelyzet)\b/i.test(lower) ||
+    /\b(is\s+there\s+(?:a\s+)?blizzard|blizzard\s+alert|blizzard\s+status|are\s+lifts?\s+running|is\s+(?:the\s+)?(?:south\s+)?lift\s+(?:open|closed)|lifts?\s+status|lift\s+open|lift\s+closed|weather\s+report|snow\s+report|telemetry\s+report)\b/i.test(lower) ||
+    /^(?:check\s+)?(?:conditions?|weather|telemetry|forecast|időjárás|viszonyok|hóhelyzet)\.?$/i.test(lower) ||
+    /\b(check\s+conditions|check\s+weather|check\s+lifts?|check\s+snow|check\s+telemetry)\b/i.test(lower);
+
+  if (isWeatherInquiry) {
+    return 'checkConditions';
+  }
+
+  // 6. Locate / Where is / Find query
+  // Explicit safety: Any message dispatch is strictly forbidden from reaching locateEntity
+  if (!isMessageDispatch && /\b(where\s*(?:is|are|am|was)|locate|find|position\s*of|who\s*is\s*at|status\s*of|tell\s*me\s*about|info\s*(?:on|about)|hol\s*(?:van|vannak|jár)|merre\s*(?:van|jár)|hol\s*találom|helyzete|státusza|mit\s*csinál|mi\s*a\s*helyzet)\b/i.test(lower)) {
+    return 'locateEntity';
+  }
+
   // Direct person inquiry check using fuzzy phonetic matching against registered skiers
-  const personMatch = matchBestPerson(lower);
-  if (personMatch) {
-    return 'locateEntity';
+  // Never locate a person when dispatching a message to them
+  if (!isMessageDispatch) {
+    const personMatch = matchBestPerson(lower);
+    if (personMatch) {
+      return 'locateEntity';
+    }
   }
 
-  // Hungarian locate patterns
-  if (/\b(where\s*(is|are|am|was)|locate|find|position\s*of|who\s*is\s*at|status\s*of|tell\s*me\s*about|info\s*(on|about)|hol\s*(van|vannak|jár)|merre\s*(van|jár)|hol\s*találom|helyzete|státusza|mit\s*csinál|mi\s*a\s*helyzet)\b/i.test(lower)) {
-    return 'locateEntity';
-  }
-
-  // Squad overview inquiry
-  if (/\b(squad|team|everyone|everybody|csapat|többiek|összesen)\b/i.test(lower)) {
+  // Squad overview inquiry (explicitly requires an inquiry or standalone squad inquiry)
+  if (!isMessageDispatch && (
+    /\b(where\s*(?:is|are)\s*(?:the\s*)?(?:squad|team|everyone|everybody)|hol\s*van\s*(?:a\s*)?(?:csapat|mindenki)|csapat\s*helyzete)\b/i.test(lower) ||
+    /^(?:squad|team|everyone|everybody|csapat|többiek|összesen)\.?$/i.test(lower)
+  )) {
     return 'locateEntity';
   }
 
   // Fallback: try route if "to" + destination mentioned
-  if (/\bto\b/i.test(lower)) {
+  if (!isMessageDispatch && /\bto\b/i.test(lower)) {
     const dest = resolveNodeName(lower);
     if (dest) return 'planSkiRoute';
   }
