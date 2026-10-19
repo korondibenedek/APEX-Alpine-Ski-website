@@ -372,6 +372,151 @@ Authored a complete [`README.md`](file:///home/benedek/SÍapp/README.md) documen
      - `[⛑️ Ski Patrol]` (a hegyimentőkkel folytatott forgalom)
    - Bármelyik profilra kattintva a napló azonnal átszűr az adott csapattárs történetére.
 
+---
+
+## 16. Dinamikus Egyéni Profil Létrehozás & Teljes Körű Funkció Támogatás
+
+### Felhasználói kérés:
+> *"írd át úgy a kódot hogy én tudjak létrehozni profilokat és azokn működjön az eddig létrehozott demo funkciók mert jelenleg egy csomó olyan funkció van ami csak a demo profilokon jelenik meg"*
+
+### Problémafelmérés és Elemzés:
+A korábbi demó verzióban több funkció mereven be volt égetve a kezdeti 4 demó profilra (`benedek`, `renato`, `kajti`, `patrol`):
+1. Az új síelők nem maradtak meg oldalfrissítés után (`localStorage` hiánya).
+2. A `MountainData.resolveNodeName` és `locateEntity` beégetett `if (acc.id === 'renato')` ágakat tartalmazott.
+3. A `matchBestPerson` fonetikus hasonlítás csak a demó nevekre rendelkezett kiterjesztett becenév- és rag-támogatással.
+4. A csapattársak összegzése (*"Where is everyone?"*) mereven Renatót és Kajtit sorolta fel.
+5. A rádiós csatornaszűrő gombok és a válaszadó logika kizárólag a demó fiókokra működött.
+6. A profilkészítő űrlapból hiányzott a szerepkör, az avatár és az egyéni radarpötty szín kiválasztása.
+
+### Megvalósított Megoldások és Architektúra:
+
+1. **Teljes Körű Profil Létrehozó és Kezelő Rendszer (`index.html`, `styles.css`, `mountain-data.js`, `app.js`)**:
+   - **Adatmezők**:
+     - *Hívójel / Név* (`customAccountName`): tetszőleges magyar vagy nemzetközi név (pl. *"Dávid"*, *"Alex"*, *"Zsófi"*).
+     - *Szerepkör / Specialitás* (`customAccountRole`): pl. *"Speed Rider"*, *"Freeride Scout"*, *"Downhill Lead"*.
+     - *Kezdő Hegyi Szektor* (`customAccountSector`): mind a 8 alpesi szektor és állomás választható.
+     - *Avatár Ikon* (`customAvatarSelector`): interaktív választó gombok (🎿, 🏂, ⛷️, ⛑️, 🏔️, ⚡, 🦅, 🛷).
+     - *Radarpötty Szín* (`customColorSelector`): taktikai színpaletta (Neon cián, Radar zöld, Borostyán narancs, Elektromos lila, Mentő piros, Alpesi arany).
+   - **Kétféle Létrehozási Mód**:
+     - `[➕ Add to Squad]`: Új csapattagként felveszi a pályára a kiválasztott szektorhoz, megjelenik a térképen és a rádión, miközben a felhasználó az aktuális síelőjénél marad.
+     - `[🔑 Create & Log In]`: Létrehozza a profilt és azonnal átvált rá kezelőként (`squad.you`), a zöld GPS radarpötty oda ugrik.
+   - **Törlési Lehetőség (`deleteProfile`)**:
+     - A fióklistában minden profil mellett megjelenik a törlés (kukagomb) ikon.
+     - Megerősítés után biztonságosan eltávolítja a síelőt a hálózatból és a térképről.
+   - **`localStorage` Perzisztencia (`apex_accounts`, `apex_active_account`)**:
+     - A létrehozott síelőprofilok és az aktív belépés túlélnek minden böngésző-újratöltést.
+
+2. **Dinamikus Térkép & Radar Pöttyök (`renderSquad` & `squadGroup`)**:
+   - Bármely létrehozott profil azonnal megjelenik az SVG alpesi szektortérképen:
+     - Az egyéni színével, pulzáló radargyűrűvel, hívójelével és avatárjával.
+     - Ha belépünk a profilba, zöldre (`#39ff14`) vált és ő lesz a `squad.you`.
+
+3. **Univerzális Hangalapú Keresés (*"Where is [Profil]?"* / *"Hol van [Profil]?"*)**:
+   - A `MountainData.matchBestPerson` algoritmusa dinamikusan legenerálja az összes létező profilhoz az alaki, fonetikus és magyar toldalékos változatokat (pl. `Dávid`, `David`, `Dávidnak`, `Dávidhoz`, `Dávidot`, `Davidot`).
+   - A `locateEntity` bármely létrehozott profilról automatikusan összeállítja a teljes telemetriát:
+     - Bemondja az elhelyezkedését, magasságát, státuszát és a 100%-os rádiókapcsolatot.
+     - A térképen a radarpöttye felvillan és megduzzad (`scale(2.4)`), a hegyi szektorcsomópont ciánkékkel pulzál.
+     - Megjeleníti az egyéni avatárral, színnel és státusszal ellátott `SQUAD COMMS` kártyát.
+
+4. **Dinamikus Célravezetés és Intercept Navigáció (*"Route to [Profil]"* / *"Hogyan jutok el [Profilhoz]?"*)**:
+   - A `resolveNodeName` és `extractRouteArgs` felismeri a létrehozott profil nevét, és a célállomást az ő pillanatnyi szektorára állítja.
+   - A Dijkstra algoritmus megtervezi a leggyorsabb útvonalat az aktív játékostól a célprofilig.
+   - Kirajzolja a ragyogó neonszínű útvonalat a térképen, és megnyitja a lépésről-lépésre HUD navigációs kártyát ETA-val és nehézségi fokkal.
+
+5. **Dinamikus Rádiókapcsolat & Automatizált Válasz (*"Radio [Profil]..."* / *"Tell [Profil]..."*)**:
+   - A `VoiceEngine.extractSquadArgs` felismeri az egyéni profilt mint címzettet.
+   - A `[RADIO COMMS]` fülön dinamikusan generálódnak a szűrőgombok (`channel-filter-pill`), minden létrehozott síelő saját fület és olvasatlan üzenet jelvényt kap!
+   - **Autentikus Válasz 2.5 mp után**:
+     - A megcímzett egyéni profil automatikusan visszaválaszol a rádiókörön!
+     - A válasz tartalmazza a valós nevét, avatárját, szerepkörét és a szektorát (pl. *"Dávid at Ridge Drop copying your radio message, Benedek. Transceiver signal is 100%. See you on the slopes! Over."*).
+     - Lejátssza az eljárásos rádiós sercegést (`playRadioSquelch`) és angolul bemondja az adást.
+
+6. **Dinamikus Csapat Áttekintés (*"Where is everyone?"* / *"Hol vannak a többiek?"*)**:
+   - A `locateEntity("squad")` mostantól az összes regisztrált profilt és a pillanatnyi magasságukat/helyzetüket fűzi egybe élő rádiójelentéssé.
+
+---
+
+## 17. Rádióüzenet Indítómondat Szűrés és "Over" Ismétlés Eltávolítása
+
+### Felhasználói észrevétel / Hiba:
+> *"amikor az aktív profil küld rádió üzenetet akkor ne küldje el azt hogy 'send a radio message' és valamiért 3x mondja azt hogy over"*
+
+### Okok feltárása:
+1. **Trigger kifejezés kiszivárgása az üzenettörzsbe (`"send a radio message"` / `"küldj rádióüzenetet"`):**
+   - Az `extractSquadArgs` a teljes bemenetet (`text`) adta át a `formatRadioMessage`-nek a tiszta törzs (`payload`) helyett.
+   - Ha a felhasználó csak annyit mondott, hogy *"send a radio message"* vagy *"send a radio message to Renato"*, a regex a végén visszatért az eredeti szövegre (`clean = text`), és elküldte a rádióba, hogy *"Send a radio message. Over."*.
+   - A névhasonlító algoritmus (`matchBestPerson`) nem zárta ki a parancsszavakat (`send`, `radio`, `message`), így rövid szavak esetén téves egyezést adott.
+2. **"Over" 3x-os elhangzása egymás után:**
+   - **1. "Over":** A `formatRadioMessage` által előállított `cleanText` végén már szerepelt az `" Over."`.
+   - **2. "Over":** Az `app.js` (`handlePingSquad`) a sisak AI válaszban idézte a `cleanText`-et, majd a végére még egyszer hozzáfűzte: `... "${cleanText}"${etaText}. Over.`. Emiatt a helyi AI HUD asszisztens egyetlen mondatban kétszer is kimondta az "Over"-t!
+   - **3. "Over":** 2.5 másodperccel később a beérkező csapattag rádióválasza (`reply.text`) szintén "Over"-re végződött, amit az automatikus rádióbeszéd (`autoSpeak: true`) hangosan felolvasott.
+
+### Elvégzett módosítások:
+1. **`mountain-data.js`**:
+   - Bevezetésre került a `RESERVED_WORDS` tiltólista (`send`, `radio`, `message`, `tell`, `ping`, `squad`, `route`, stb.), így az operátori parancsszavak sosem párosulnak síelőnevekkel.
+   - Rövid szavakra ($\le 5$ karakter) szigorú Levenshtein korlát ($\le 1$) és 0.65-ös minimális küszöb került beépítésre.
+2. **`voice-engine.js`**:
+   - `extractSquadArgs`: Előzetesen leválasztja az angol és magyar diszpécser kifejezéseket (`send a radio message to`, `küldj rádióüzenetet`, stb.) és a címzetteket. A tiszta `payload`-ot adja át formázásra.
+   - Ha a `payload` üres vagy csak vezényszóból áll, professzionális taktikai rádióellenőrzést generál (`"Radio check for [Target]. Transceiver online, standing by for traffic. Over."` vagy `"Squad radio check... Over."`), kizárva a *"send a radio message"* továbbítását.
+   - A címzettek leválasztására biztonságos, szóhatár-érzékeny regex készült, amely kezeli a magyar toldalékos neveket (`Renátónak`, `Kajtinek`, `a csapatnak`) anélkül, hogy a hasznos üzenetből karaktereket csonkítana.
+3. **`app.js` (`handlePingSquad`)**:
+   - A sisak HUD AI szóbeli megerősítéséből (`resp`) levágásra került az `"Over."` (`spokenBody`), és a mondat végi `. Over.` is eltávolításra került. A sisakasszisztens közvetlenül a kezelőnek beszél, nem a rádióba ad!
+   - A csapattársak válaszában (2.5 mp múlva) természetes, hiteles rádióprotokollként egyszer hangzik el az "Over".
+   - A rádiós naplóban és a Tactical HUD kártyán a teljes, formailag helyes taktikai üzenet jelenik meg.
+
+---
+
+## 18. Kódbázis Moduláris Átszervezése és Fájlokra Bontása (Clean Architecture)
+
+### Felhasználói kérés:
+> *"bontsd szét fájlokra és mappákra logikailag helyesen a többszáz soros kódot hogy én is át tudjam látni"*
+
+### Elemzés és Probléma:
+A projekt a fejlesztés során 3 nagyméretű monolitikus fájlba sűrűsödött:
+- `app.js` (1445 sor): UI vezérlés, SVG térképrajzolás, eseménykezelők, rádiós napló és profil modal.
+- `voice-engine.js` (1002 sor): Web Audio szintetizátor, Web Speech API felismerés, SpeechSynthesis TTS, NLU Intent router és Gemini kliens.
+- `mountain-data.js` (888 sor): Pályatérkép topológia, Dijkstra gráfkereső, síelő profilok, névhasonlító és időjárás telemetria.
+
+Ez megnehezítette az áttekinthetőséget, a célzott hibajavítást és a komponensek külön-külön történő tesztelését.
+
+### Létrehozott Moduláris Mappastruktúra (`js/`):
+A kódot szakterületük és felelősségi körük (Single Responsibility Principle) szerint bontottuk szét:
+
+```
+js/
+├── data/
+│   ├── resort-graph.js    (Hegyi csomópontok, sípályák, felvonók és szimulátor állapot)
+│   ├── accounts.js        (Síelő profilok, csapat állapot, localStorage mentés/betöltés)
+│   ├── fuzzy-matcher.js   (Levenshtein távolság, ékezet normalizálás, magyar névragozás, entitás kereső)
+│   ├── telemetry.js       (Hó- és időjárási viszonyok, lavinaveszély jelentések)
+│   └── index.js           (Egységesített MountainData interfész export)
+├── algorithms/
+│   └── dijkstra.js        (Dijkstra útvonaltervező algoritmus, nehézség és ETA számítás)
+├── voice/
+│   ├── audio-fx.js        (Procedurális rádiós sercegés zajgenerátor és AudioContext)
+│   ├── speech-rec.js      (Web Speech API felismerés, 3-állapotú mikrofon gomb és visualizer)
+│   ├── speech-tts.js      (Beszédszintézis, natív angol hang kiválasztás, aiSpeak és némítás)
+│   ├── intent-parser.js   (NLU szándékfelismerő, útvonal, SOS, rádió és telemetria paraméterkivonás)
+│   ├── radio-formatter.js (Taktikai rádióüzenet sablonok, trigger kiszűrés, diszpécser szövegek)
+│   ├── gemini-client.js   (Opcionális Google Gemini 2.0 Flash Function Calling kliens)
+│   └── index.js           (Egységesített VoiceEngine interfész export)
+├── ui/
+│   ├── map-renderer.js    (SVG hegyitérkép, sípálya vonalak, felvonók és GPS radarpöttyök rajzolása)
+│   ├── tactical-hud.js    (Lépésről lépésre navigációs kártya, telemetria kártya és SOS vészvillogó)
+│   ├── radio-feed.js      (Rádió üzenetfolyam, csatornaszűrő gombok és audio újrajátszás)
+│   └── profile-manager.js (Síelő profil modal, profilváltás, törlés és felső állapotsor)
+└── main.js                (Alkalmazás belépési pontja, komponensek összekapcsolása és eseménykezelők)
+```
+
+### Előnyök és Visszafelé Kompatibilitás:
+1. **Átláthatóság és karbantarthatóság**: A fájlok 80–250 sorosak, a fejlesztő azonnal megtalálja, hova kell nyúlni (pl. térképrajzolás -> `map-renderer.js`, rádiószövegek -> `radio-formatter.js`).
+2. **Modern ES6 Modulok**: Natív `import` / `export` szintaxis böngészős build lépés nélkül (`type="module"` az `index.html`-ben).
+3. **Globális Konzol Hozzáférés Megőrzése**: A `window.MountainData` és `window.VoiceEngine` objektumok a `main.js`-ben automatikusan ki vannak vezetve a `window`-ra, így a böngésző fejlesztői konzoljában továbbra is minden azonnal tesztelhető.
+4. **Gyökérfájlok Átvezető Hídjai**: Az `app.js`, `mountain-data.js` és `voice-engine.js` a gyökérben tiszta re-export modulokká váltak.
+
+
+
+
 
 
 

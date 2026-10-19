@@ -70,47 +70,55 @@
 
   <!-- ─── ACCOUNT / SKIER LOGIN MODAL ─── -->
   <div id="accountModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm">
-    <div class="bg-hud-card border border-hud-border rounded-xl p-6 w-[450px] shadow-2xl relative">
-      <div class="flex items-center justify-between mb-3 border-b border-hud-border pb-2.5">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-5 w-[490px] shadow-2xl relative max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between mb-2.5 border-b border-hud-border pb-2.5">
         <div>
           <h3 class="text-white font-bold flex items-center gap-2 text-sm tracking-wide">
             <i data-lucide="users" class="w-4 h-4 text-hud-green"></i>
-            SQUAD ACCOUNTS & PROFILE LOGIN
+            SQUAD ACCOUNTS & PROFILE CREATOR
           </h3>
           <p class="text-[10px] font-mono text-hud-text/50">MOUNT APEX · GPS TRANSCEIVER SQUAD NETWORK</p>
         </div>
-        <button id="btnCloseAccountModal" class="text-hud-text/40 hover:text-white transition p-1">
+        <button id="btnCloseAccountModal" class="text-hud-text/40 hover:text-white transition p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <p class="text-xs text-hud-text/70 mb-3 leading-relaxed">
-        Log in as an existing squad operator or register a new skier call sign. The map position and GPS telemetry will immediately bind to your selected skier.
+      <p class="text-xs text-hud-text/70 mb-2.5 leading-relaxed">
+        Switch between active operators, or create brand-new custom skier profiles. Created profiles dynamically appear on the radar map and respond to voice queries, intercept routing, and radio comms.
       </p>
 
       <!-- Account List -->
-      <div class="text-[10px] font-mono uppercase tracking-wider text-hud-text/40 mb-1.5 flex justify-between">
-        <span>Available Squad Accounts</span>
-        <span class="text-hud-green">● Active GPS</span>
+      <div class="text-[10px] font-mono uppercase tracking-wider text-hud-text/40 mb-1 flex justify-between items-center">
+        <span id="squadAccountCount">Registered Squad Operators</span>
+        <span class="text-hud-green flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-hud-green animate-pulse"></span> Active GPS Network</span>
       </div>
-      <div id="accountsListContainer" class="space-y-1.5 mb-4 max-h-56 overflow-y-auto scrollbar-thin">
+      <div id="accountsListContainer" class="space-y-1.5 mb-3 max-h-44 overflow-y-auto scrollbar-thin pr-0.5">
         <!-- Rendered dynamically via app.js -->
       </div>
 
-      <!-- Custom Account / New Skier Login -->
-      <div class="bg-hud-bg/80 border border-hud-border rounded-lg p-3">
-        <h4 class="text-[10px] font-mono uppercase tracking-wider text-hud-text/50 mb-2 flex items-center gap-1.5">
-          <i data-lucide="user-plus" class="w-3.5 h-3.5 text-hud-cyan"></i>
-          Log in with Custom Skier Call Sign
+      <!-- Custom Profile Creator Form -->
+      <div class="bg-hud-bg/85 border border-hud-border rounded-lg p-3 space-y-2.5">
+        <h4 class="text-[10px] font-mono uppercase tracking-wider text-hud-cyan font-bold flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+          Create New Skier Profile
         </h4>
-        <div class="grid grid-cols-2 gap-2 mb-2">
+
+        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[10px] text-hud-text/50 block mb-1">Call Sign / Name</label>
-            <input id="customAccountName" type="text" placeholder="e.g. Alex, David" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan">
+            <label class="text-[10px] text-hud-text/60 block mb-1">Call Sign / Name</label>
+            <input id="customAccountName" type="text" placeholder="e.g. Alex, David, Zsófi" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono">
           </div>
           <div>
-            <label class="text-[10px] text-hud-text/50 block mb-1">Starting Mountain Sector</label>
-            <select id="customAccountSector" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-hud-cyan font-mono">
+            <label class="text-[10px] text-hud-text/60 block mb-1">Rider Role / Specialty</label>
+            <input id="customAccountRole" type="text" placeholder="e.g. Speed Rider, Freeride" class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Mountain Sector</label>
+            <select id="customAccountSector" class="w-full bg-hud-card border border-hud-border rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-hud-cyan font-mono">
               <option value="glacierPeak">Glacier Peak (3200m)</option>
               <option value="ridgeDrop">Ridge Drop (2950m)</option>
               <option value="avalancheChute">Avalanche Chute (2600m)</option>
@@ -121,11 +129,43 @@
               <option value="mainValleyBase">Main Valley Base (1500m)</option>
             </select>
           </div>
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Radar Dot Color</label>
+            <div id="customColorSelector" class="flex items-center gap-1.5 pt-1">
+              <button type="button" class="color-swatch-dot active" data-color="#00e5ff" style="background:#00e5ff; box-shadow:0 0 6px #00e5ff;" title="Neon Cyan"></button>
+              <button type="button" class="color-swatch-dot" data-color="#39ff14" style="background:#39ff14;" title="Radar Green"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ff9100" style="background:#ff9100;" title="Amber Orange"></button>
+              <button type="button" class="color-swatch-dot" data-color="#e040fb" style="background:#e040fb;" title="Electric Purple"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ff2d2d" style="background:#ff2d2d;" title="Rescue Red"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ffd600" style="background:#ffd600;" title="Alpine Gold"></button>
+            </div>
+          </div>
         </div>
-        <button id="btnLoginCustomAccount" class="w-full py-1.5 text-xs rounded-lg bg-hud-cyan/20 border border-hud-cyan/40 text-hud-cyan hover:bg-hud-cyan/30 font-semibold transition flex items-center justify-center gap-1.5">
-          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-          Log In / Connect Skier GPS
-        </button>
+
+        <div>
+          <label class="text-[10px] text-hud-text/60 block mb-1">Rider Icon / Avatar</label>
+          <div id="customAvatarSelector" class="flex flex-wrap gap-1.5">
+            <button type="button" class="avatar-pill-btn active" data-avatar="🎿">🎿 Skier</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🏂">🏂 Boarder</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⛷️">⛷️ Telemark</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⛑️">⛑️ Medic</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🏔️">🏔️ Scout</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⚡">⚡ Speed</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🦅">🦅 Eagle</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🛷">🛷 Sled</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button id="btnAddSkierToSquad" type="button" class="py-1.5 px-3 text-xs rounded-lg bg-hud-card border border-hud-border hover:border-hud-cyan text-white hover:text-hud-cyan font-mono transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-hud-cyan"></i>
+            Add to Squad
+          </button>
+          <button id="btnLoginCustomAccount" type="button" class="py-1.5 px-3 text-xs rounded-lg bg-hud-cyan/20 border border-hud-cyan/50 text-hud-cyan hover:bg-hud-cyan/30 font-mono font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+            Create & Log In
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -381,22 +421,7 @@
                 <span id="activeChannelFilterLabel" class="text-[9px] font-mono text-hud-cyan uppercase font-semibold">📢 ALL SQUAD</span>
               </div>
               <div id="radioChannelFilters" class="flex flex-wrap gap-1">
-                <button class="channel-filter-pill active" data-channel="all">
-                  <span>📢 ALL SQUAD</span>
-                  <span class="badge" id="badgeCountAll">0</span>
-                </button>
-                <button class="channel-filter-pill" data-channel="Renato">
-                  <span>🏂 Renato</span>
-                  <span class="badge" id="badgeCountRenato">0</span>
-                </button>
-                <button class="channel-filter-pill" data-channel="Kajti">
-                  <span>⛷️ Kajti</span>
-                  <span class="badge" id="badgeCountKajti">0</span>
-                </button>
-                <button class="channel-filter-pill" data-channel="Ski Patrol">
-                  <span>⛑️ Ski Patrol</span>
-                  <span class="badge" id="badgeCountPatrol">0</span>
-                </button>
+                <!-- Dynamically populated for all registered squad accounts via app.js -->
               </div>
             </div>
           </div>
@@ -471,10 +496,8 @@
     </section>
   </main>
 
-  <!-- Scripts (order matters) -->
-  <script src="mountain-data.js"></script>
-  <script src="voice-engine.js"></script>
-  <script src="app.js"></script>
+  <!-- Modular Architecture Entry Point -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
 

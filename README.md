@@ -87,23 +87,34 @@ When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Ka
 - AI speaks calming first-aid instructions while alerting Ski Patrol #4 at Eagle Mid-Station.
 - Can be dismissed via voice (*"Cancel SOS"*, *"False alarm, I'm okay"*) or via the dedicated **[Dismiss Emergency Beacon]** HUD button.
 
-### 7. 👤 Multi-Skier Profile Switching
-- Click `[SKIER: Benedek @ Glacier Peak ▾]` in the top bar to switch perspectives between:
-  - **Benedek** (Glacier Peak, 3,200m)
-  - **Renato** (Panorama Hut, 2,200m)
-  - **Kajti** (Red Run 4, 2,000m)
-  - **Ski Patrol #4** (Eagle Mid-Station, 2,400m)
-  - **Custom Skier**: Register any custom call sign and starting sector!
-- All radar dots, route origins, and telemetry cards synchronize dynamically to the active skier.
+### 7. 👤 Custom Profile Creator & Multi-Skier Ecosystem
+- **Universal Custom Profile Creator**:
+  - Click `[SKIER: Benedek @ Glacier Peak ▾]` in the top bar to open the **Squad Accounts & Profile Creator** modal.
+  - **Customizable Attributes**:
+    - **Call Sign / Name**: Any name (e.g. *David*, *Alex*, *Zsófi*).
+    - **Role / Specialty**: (e.g. *Speed Rider*, *Freeride Scout*, *Alpine Medic*).
+    - **Mountain Sector**: Choose from all 8 resort nodes from Summit to Base.
+    - **Avatar**: Interactive emoji selection (🎿 Skier, 🏂 Boarder, ⛷️ Telemark, ⛑️ Medic, 🏔️ Scout, ⚡ Speed, 🦅 Eagle, 🛷 Sled).
+    - **Radar Color**: Tactical palette (Neon Cyan, Radar Green, Amber Orange, Electric Purple, Rescue Red, Alpine Gold).
+  - **Dual Action Modes**:
+    - `[➕ Add to Squad]`: Adds the skier as an active teammate stationed on Mount Apex without changing your active operator.
+    - `[🔑 Create & Log In]`: Registers the profile and immediately logs in as that skier.
+  - **Profile Deletion**: Easily remove custom squad members with the dedicated trash action.
+  - **`localStorage` Persistence**: All created profiles and active login state persist reliably across browser reloads.
+- **100% Universal Feature Compatibility**:
+  - **Every created profile** receives dynamic SVG radar markers, pulse rings, and name tags.
+  - **Voice Location**: *"Where is [Profile]?"* / *"Hol van [Profile]?"* immediately highlights them, pulses their radar dot, flashes their sector, and shows their telemetry card.
+  - **Intercept Navigation**: *"Route to [Profile]"* plots the Dijkstra shortest path to their location.
+  - **Squad Overview**: Asking *"Where is everyone?"* dynamically compiles all current profiles and elevations into an alpine radio sitrep.
 
-### 8. 📻 Dedicated Radio Comms Tab & Per-Profile Channel Logging
+### 8. 📻 Dedicated Radio Comms Tab & Dynamic Transceiver Logging
 - **HUD Tabs Bar**: Toggle effortlessly between `[VISOR HUD]` (navigation, telemetry, SOS) and `[RADIO COMMS]` (encrypted squad transceiver).
-- **Per-Profile Channel Logging**: Radio messages are tracked per recipient and sender (`Renato`, `Kajti`, `Ski Patrol`, or `All Squad`).
-- **Channel Filter Pills**: Interactive buttons in the header (`[📢 ALL SQUAD]`, `[🏂 Renato]`, `[⛷️ Kajti]`, `[⛑️ Ski Patrol]`) with live count badges filter the transceiver log to specific squad members.
-- **Individual vs Broadcast Targeting**: Address squad members individually (*"Tell Renato..."*, *"Radio Kajti..."*) or broadcast to the entire team (*"Tell everyone..."*, *"Broadcast..."*).
-- **Zero Demo Clutter**: Transceiver starts with a clean slate, logging only authentic operator transmissions and responses.
-- **ASR Normalizer & Alpine Radio Syntax**: Jumbled speech transcripts are automatically normalized into crisp, tactical NATO/Alpine English radio protocol ending with *"Over."*
-- **Two-Way Interactivity**: Transmitting a squad message triggers an automatic, realistic reply from the addressed recipient 2.5 seconds later.
+- **Dynamic Channel Filter Pills**: The transceiver header generates interactive filter buttons for **every registered squad member** (`[📢 ALL SQUAD]`, `[⚡ David]`, `[🏂 Renato]`, `[⛷️ Kajti]`, etc.) with real-time transmission count badges.
+- **Per-Profile Channel Logging**: Direct transmissions and incoming replies are isolated to each skier's log.
+- **Individual vs Broadcast Targeting**: Address squad members individually (*"Tell David..."*, *"Radio Alex..."*, *"Szólj Dávidnak..."*) or broadcast to the entire team (*"Tell everyone..."*, *"Broadcast..."*).
+- **Zero Demo Clutter**: Transceiver starts clean with zero fake messages, logging only real user transmissions and contextual replies.
+- **ASR Normalizer & Alpine Radio Syntax**: Normalizes voice into crisp tactical NATO/Alpine English ending with *"Over."*
+- **Dynamic Automated Replies**: Address any created or demo profile, and after 2.5s that skier radios back with an authentic reply reflecting their actual sector, avatar, and role!
 - **Replay Audio**: Every transmission card includes a `[REPLAY AUDIO]` button that plays procedural radio squelch and English TTS.
 
 ---
@@ -139,7 +150,7 @@ You can test these commands either by speaking into your microphone (click the m
 | **Track Patrol** | *"Where is Ski Patrol?"* / *"Hol van a hegyimentő?"* | Pulses Patrol red dot at Eagle Mid-Station |
 | **Route to Teammate** | *"How do I get to Kajti?"* / *"Route to Renato"* | Highlights neon green path; shows ETA & difficulty |
 | **Safe Routing** | *"Route me to Panorama Hut avoiding black runs."* | Dijkstra avoids expert slopes, guides via Blue Run 1 & 3 |
-| **Radio Ping** | *"Tell Renato and Kajti I'm at the hut in 15 minutes."* | Synthesizes radio burst; updates Squad Comms card |
+| **Radio Ping / Dispatch** | *"Send a radio message to Renato"* / *"Tell squad we meet at hut"* | Tactical radio check or message dispatch; logs under teammate profile with 2.5s auto-reply |
 | **Mountain Telemetry** | *"Check conditions."* / *"How is the weather?"* | Reports peak blizzard, wind speed, and lift status |
 | **Emergency SOS** | *"MAYDAY! I crashed off-piste near Avalanche Chute!"* | Triggers crimson HUD mode, locks GPS, alerts Ski Patrol |
 | **Cancel SOS** | *"Cancel SOS."* / *"False alarm, I'm fine."* | [Dismiss Emergency Beacon] button restores normal HUD |
@@ -150,13 +161,33 @@ You can test these commands either by speaking into your microphone (click the m
 
 ```
 SÍapp/
-├── index.html         # Complete tactical layout (Dual panel: Map + HUD)
-├── styles.css         # Dark alpine HUD styling, neon route stroke, glowing radar dots
-├── mountain-data.js   # Mountain resort graph, Dijkstra pathfinding, fuzzy name matcher
-├── voice-engine.js    # Web Speech API, procedural radio squelch synth, 3-state mic toggle
-├── app.js             # UI coordinator, SVG rendering, simulator buttons, HUD state manager
-├── README.md          # Project showcase and usage documentation
-└── ai.md              # Complete chronological development & iteration log
+├── index.html                 # Complete tactical layout (Dual panel: Map + HUD)
+├── styles.css                 # Dark alpine HUD styling, neon route stroke, glowing radar dots
+├── README.md                  # Project showcase and usage documentation
+├── ai.md                      # Complete chronological development & iteration log
+└── js/                        # Modular JavaScript Architecture (ES6 Modules)
+    ├── main.js                # App entry point, bootstrap, event listeners & wiring
+    ├── data/
+    │   ├── resort-graph.js    # Mountain nodes (huts, peaks, lifts) & trail edges
+    │   ├── accounts.js        # Skier profiles, squad state, localStorage persistence
+    │   ├── fuzzy-matcher.js   # Levenshtein distance, Hungarian phonetics & declensions
+    │   ├── telemetry.js       # Real-time weather, snow conditions & hazard reports
+    │   └── index.js           # Unified MountainData module interface
+    ├── algorithms/
+    │   └── dijkstra.js        # Graph shortest path routing with avoid-black/ice filters
+    ├── voice/
+    │   ├── audio-fx.js        # Procedural radio squelch synthesis & Web Audio API
+    │   ├── speech-rec.js      # Web Speech recognition, 3-state mic & audio visualizer
+    │   ├── speech-tts.js      # Speech synthesis & AI vocal response (English voice normalization)
+    │   ├── intent-parser.js   # NLU Intent classification & argument extraction
+    │   ├── radio-formatter.js # Tactical radio phrasing & Hungarian grammar handling
+    │   ├── gemini-client.js   # Optional Gemini 2.0 Flash tool-calling integration
+    │   └── index.js           # Unified VoiceEngine module interface
+    └── ui/
+        ├── map-renderer.js    # SVG map rendering, ski runs & GPS radar blips
+        ├── tactical-hud.js    # Turn-by-turn nav cards, telemetry & SOS emergency beacon
+        ├── radio-feed.js      # Tactical radio log, channel filters & audio replay
+        └── profile-manager.js # Skier profile creation, switching modal & color selection
 ```
 
 ---
