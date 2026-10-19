@@ -522,7 +522,79 @@ const MountainData = (() => {
     if (!text) return null;
     const lower = text.toLowerCase().trim();
 
-    // 1. Resolve squad members using fuzzy matching
+    // 1. Station name keyword mappings (sorted by length descending for exact matches)
+    const mappings = {
+      'fővölgyi bázisállomás': 'mainValleyBase',
+      'eagle középállomás': 'eagleMid',
+      'avalanche chute': 'avalancheChute',
+      'eagle mid-station': 'eagleMid',
+      'eagle mid station': 'eagleMid',
+      'main valley base': 'mainValleyBase',
+      'south bowl lift': 'southBowlLift',
+      'lavina-hasadék': 'avalancheChute',
+      'glacier peak': 'glacierPeak',
+      'panorama hut': 'panoramaHut',
+      'panoráma hütte': 'panoramaHut',
+      'bázisállomás': 'mainValleyBase',
+      'középállomás': 'eagleMid',
+      'gleccsercsúcs': 'glacierPeak',
+      'gerincugrató': 'ridgeDrop',
+      'déli katlan': 'southBowlLift',
+      'fenyves erdő': 'pineForest',
+      'ridge drop': 'ridgeDrop',
+      'pine forest': 'pineForest',
+      'mid station': 'eagleMid',
+      'mid-station': 'eagleMid',
+      'midstation': 'eagleMid',
+      'valley base': 'mainValleyBase',
+      'south bowl': 'southBowlLift',
+      'south lift': 'southBowlLift',
+      'bowl lift': 'southBowlLift',
+      'main valley': 'mainValleyBase',
+      'hütténél': 'panoramaHut',
+      'huttenel': 'panoramaHut',
+      'hüttéhez': 'panoramaHut',
+      'huttehez': 'panoramaHut',
+      'hüttében': 'panoramaHut',
+      'hüttebe': 'panoramaHut',
+      'avalanche': 'avalancheChute',
+      'panorama': 'panoramaHut',
+      'restaurant': 'panoramaHut',
+      'crossroads': 'pineForest',
+      'gleccser': 'glacierPeak',
+      'glacier': 'glacierPeak',
+      'lavina': 'avalancheChute',
+      'summit': 'glacierPeak',
+      'forest': 'pineForest',
+      'village': 'mainValleyBase',
+      'valley': 'mainValleyBase',
+      'bottom': 'mainValleyBase',
+      'chute': 'avalancheChute',
+      'eagle': 'eagleMid',
+      'ridge': 'ridgeDrop',
+      'trees': 'pineForest',
+      'lodge': 'mainValleyBase',
+      'south': 'southBowlLift',
+      'hütte': 'panoramaHut',
+      'hutte': 'panoramaHut',
+      'base': 'mainValleyBase',
+      'peak': 'glacierPeak',
+      'deck': 'panoramaHut',
+      'pine': 'pineForest',
+      'top': 'glacierPeak',
+      'hut': 'panoramaHut'
+    };
+
+    // Check station names first (sorted longest to shortest; short tokens require word boundary)
+    for (const [key, val] of Object.entries(mappings)) {
+      if (key.length <= 4) {
+        if (new RegExp('\\b' + key + '\\b', 'i').test(lower)) return val;
+      } else {
+        if (lower.includes(key)) return val;
+      }
+    }
+
+    // 2. Resolve squad members using fuzzy matching (e.g. "how do I get to Renato" / "where is Kajti")
     const personMatch = matchBestPerson(lower);
     if (personMatch) {
       const acc = personMatch.account;
@@ -541,7 +613,7 @@ const MountainData = (() => {
       return acc.currentNode || acc.location || 'mainValleyBase';
     }
 
-    // 2. Generic station resolution ("a station", "nearest station", "the station")
+    // 3. Generic station resolution ("a station", "nearest station", "the station")
     if (/\b(a\s*station|the\s*station|next\s*station|nearest\s*station|station)\b/i.test(lower)) {
       const cur = squad.you?.currentNode || 'glacierPeak';
       if (cur === 'glacierPeak') return 'eagleMid';
@@ -550,20 +622,6 @@ const MountainData = (() => {
       return 'mainValleyBase';
     }
 
-    // 3. Station name keyword mappings
-    const mappings = {
-      'glacier': 'glacierPeak', 'glacier peak': 'glacierPeak', 'peak': 'glacierPeak', 'summit': 'glacierPeak', 'top': 'glacierPeak',
-      'ridge': 'ridgeDrop', 'ridge drop': 'ridgeDrop',
-      'eagle': 'eagleMid', 'eagle mid': 'eagleMid', 'mid station': 'eagleMid', 'mid-station': 'eagleMid', 'midstation': 'eagleMid',
-      'panorama': 'panoramaHut', 'hut': 'panoramaHut', 'hütte': 'panoramaHut', 'hutte': 'panoramaHut', 'panorama hut': 'panoramaHut', 'restaurant': 'panoramaHut', 'deck': 'panoramaHut',
-      'pine': 'pineForest', 'pine forest': 'pineForest', 'forest': 'pineForest', 'crossroads': 'pineForest', 'trees': 'pineForest',
-      'south bowl': 'southBowlLift', 'south lift': 'southBowlLift', 'bowl lift': 'southBowlLift', 'south': 'southBowlLift',
-      'avalanche': 'avalancheChute', 'chute': 'avalancheChute', 'avalanche chute': 'avalancheChute',
-      'valley': 'mainValleyBase', 'base': 'mainValleyBase', 'main valley': 'mainValleyBase', 'valley base': 'mainValleyBase', 'bottom': 'mainValleyBase', 'village': 'mainValleyBase', 'lodge': 'mainValleyBase'
-    };
-    for (const [key, val] of Object.entries(mappings)) {
-      if (lower.includes(key)) return val;
-    }
     return null;
   }
 

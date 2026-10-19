@@ -57,6 +57,25 @@
   const topBarAccountName     = $('#topBarAccountName');
   const topBarAccountLoc      = $('#topBarAccountLoc');
 
+  // HUD Navigation Tabs & Radio Comms
+  const tabBtnTactical           = $('#tabBtnTactical');
+  const tabBtnRadio              = $('#tabBtnRadio');
+  const radioUnreadBadge         = $('#radioUnreadBadge');
+  const tabViewTactical          = $('#tabViewTactical');
+  const tabViewRadio             = $('#tabViewRadio');
+  const radioFeed                = $('#radioFeed');
+  const radioMsgCount            = $('#radioMsgCount');
+  const activeChannelFilterLabel = $('#activeChannelFilterLabel');
+  const badgeCountAll            = $('#badgeCountAll');
+  const badgeCountRenato         = $('#badgeCountRenato');
+  const badgeCountKajti          = $('#badgeCountKajti');
+  const badgeCountPatrol         = $('#badgeCountPatrol');
+
+  let _activeTab = 'tactical';
+  let _radioUnreadCount = 0;
+  let _activeRadioChannel = 'all'; // 'all' | 'Renato' | 'Kajti' | 'Ski Patrol'
+  const _radioMessages = []; // Full per-profile logged transmissions
+
   // ── Clock ─────────────────────────────────────────────────────────
   function updateClock() {
     const now = new Date();
@@ -633,16 +652,304 @@
     await VoiceEngine.aiSpeak(entity.description);
   }
 
-  async function handlePingSquad(args) {
-    const { recipients, message, eta } = args;
-    showSquadCard(recipients, message, eta);
+  // ── HUD Tabs & Radio Comms Engine ────────────────────────────────
+  function switchHUDTab(tabName) {
+    _activeTab = tabName;
+    if (tabName === 'tactical') {
+      tabBtnTactical?.classList.add('active');
+      tabBtnRadio?.classList.remove('active');
+      tabViewTactical?.classList.remove('hidden');
+      tabViewRadio?.classList.add('hidden');
+    } else {
+      tabBtnRadio?.classList.add('active');
+      tabBtnTactical?.classList.remove('active');
+      tabViewRadio?.classList.remove('hidden');
+      tabViewTactical?.classList.add('hidden');
 
-    const recipText = recipients.join(' and ');
-    const etaText = eta ? `, ETA ${eta} minutes` : '';
-    const resp = `Roger, radio message sent to ${recipText}: "${message}"${etaText}. They'll get the ping on their helmet display. Over.`;
+      // Clear unread badge
+      _radioUnreadCount = 0;
+      if (radioUnreadBadge) {
+        radioUnreadBadge.textContent = '0';
+        radioUnreadBadge.classList.add('hidden');
+      }
+      renderRadioFeed();
+    }
+  }
+
+  function initHUDTabs() {
+    tabBtnTactical?.addEventListener('click', () => switchHUDTab('tactical'));
+    tabBtnRadio?.addEventListener('click', () => switchHUDTab('radio'));
+
+    // Channel filter buttons
+    $$('.channel-filter-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        $$('.channel-filter-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        _activeRadioChannel = pill.dataset.channel || 'all';
+        renderRadioFeed();
+      });
+    });
+  }
+
+  function updateChannelBadges() {
+    const countAll = _radioMessages.length;
+    const countRenato = _radioMessages.filter(m =>
+      (m.recipients || []).some(r => /renat/i.test(r)) || /renat/i.test(m.sender) || (m.recipients || []).some(r => /all/i.test(r))
+    ).length;
+    const countKajti = _radioMessages.filter(m =>
+      (m.recipients || []).some(r => /kajti/i.test(r)) || /kajti/i.test(m.sender) || (m.recipients || []).some(r => /all/i.test(r))
+    ).length;
+    const countPatrol = _radioMessages.filter(m =>
+      (m.recipients || []).some(r => /patrol/i.test(r)) || /patrol/i.test(m.sender) || (m.recipients || []).some(r => /all/i.test(r))
+    ).length;
+
+    if (badgeCountAll) badgeCountAll.textContent = countAll;
+    if (badgeCountRenato) badgeCountRenato.textContent = countRenato;
+    if (badgeCountKajti) badgeCountKajti.textContent = countKajti;
+    if (badgeCountPatrol) badgeCountPatrol.textContent = countPatrol;
+  }
+
+  function renderRadioFeed() {
+    if (!radioFeed) return;
+    updateChannelBadges();
+
+    // Update active filter label
+    if (activeChannelFilterLabel) {
+      if (_activeRadioChannel === 'all') {
+        activeChannelFilterLabel.textContent = '📢 ALL SQUAD';
+      } else if (_activeRadioChannel === 'Renato') {
+        activeChannelFilterLabel.textContent = '🏂 RENATO\'S LOG';
+      } else if (_activeRadioChannel === 'Kajti') {
+        activeChannelFilterLabel.textContent = '⛷️ KAJTI\'S LOG';
+      } else if (_activeRadioChannel === 'Ski Patrol') {
+        activeChannelFilterLabel.textContent = '⛑️ SKI PATROL LOG';
+      } else {
+        activeChannelFilterLabel.textContent = `👤 ${_activeRadioChannel.toUpperCase()}`;
+      }
+    }
+
+    const filterLower = _activeRadioChannel.toLowerCase();
+    const filtered = _radioMessages.filter(msg => {
+      if (_activeRadioChannel === 'all') return true;
+      const isRecipient = (msg.recipients || []).some(r =>
+        r.toLowerCase().includes(filterLower) || r.toLowerCase().includes('all')
+      );
+      const isSender = (msg.sender || '').toLowerCase().includes(filterLower);
+      return isRecipient || isSender;
+    });
+
+    if (radioMsgCount) {
+      radioMsgCount.textContent = `${filtered.length} TRANSMISSION${filtered.length === 1 ? '' : 'S'}`;
+    }
+
+    if (filtered.length === 0) {
+      radioFeed.innerHTML = `
+        <div class="py-8 px-4 text-center text-xs font-mono text-hud-text/40 border border-dashed border-hud-border/40 rounded-xl space-y-1.5">
+          <i data-lucide="radio" class="w-6 h-6 mx-auto mb-2 text-hud-text/30"></i>
+          <div class="text-white/80 font-semibold tracking-wider uppercase">NO TRANSMISSIONS LOGGED</div>
+          <div class="text-[10px] text-hud-text/40">
+            ${_activeRadioChannel === 'all'
+              ? 'Transceiver standing by. Use the quick prompts or microphone to transmit.'
+              : `Target frequency for ${_activeRadioChannel} is clear. Direct transmissions will log here.`}
+          </div>
+        </div>
+      `;
+      initIcons();
+      return;
+    }
+
+    radioFeed.innerHTML = '';
+    filtered.forEach(msg => {
+      const isIncoming = msg.direction === 'incoming';
+      const badgeClass = isIncoming
+        ? 'bg-hud-green/20 text-hud-green border border-hud-green/40'
+        : 'bg-hud-cyan/20 text-hud-cyan border border-hud-cyan/40';
+      const dirLabel = isIncoming ? 'INCOMING' : 'OUTGOING';
+
+      const card = document.createElement('div');
+      card.className = `radio-card ${isIncoming ? 'incoming' : 'outgoing'} space-y-2`;
+      card.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider ${badgeClass}">${dirLabel}</span>
+            <span class="text-xs font-bold text-white flex items-center gap-1">
+              <span>${msg.avatar}</span>
+              <span>${msg.sender}</span>
+              <span class="text-[10px] text-hud-text/40 font-mono font-normal">(${msg.role})</span>
+            </span>
+          </div>
+          <span class="text-[10px] font-mono text-hud-text/40">${msg.timeStr}</span>
+        </div>
+
+        <div class="flex items-center justify-between text-[10px] font-mono text-hud-text/40 border-b border-hud-border/40 pb-1">
+          <span>${msg.channel}</span>
+          <span class="text-hud-cyan font-semibold">TO: ${(msg.recipients || []).join(', ')}</span>
+        </div>
+
+        <!-- Tactical English Radio Dispatch -->
+        <div>
+          <div class="text-xs font-mono text-white/95 font-medium leading-relaxed">
+            "${msg.text}"
+          </div>
+          <div class="mt-1.5 flex items-center justify-between">
+            <button class="radio-audio-btn btn-replay-radio" title="Replay radio squelch and speech">
+              <i data-lucide="volume-2" class="w-3 h-3"></i>
+              <span>REPLAY AUDIO</span>
+            </button>
+            <span class="text-[9px] font-mono text-hud-text/30">NATO / ALPINE ENG</span>
+          </div>
+        </div>
+      `;
+
+      const btnReplay = card.querySelector('.btn-replay-radio');
+      if (btnReplay) {
+        btnReplay.addEventListener('click', async () => {
+          btnReplay.disabled = true;
+          btnReplay.classList.add('opacity-50');
+          await VoiceEngine.playRadioSquelch();
+          await VoiceEngine.aiSpeak(msg.text);
+          btnReplay.disabled = false;
+          btnReplay.classList.remove('opacity-50');
+        });
+      }
+
+      radioFeed.appendChild(card);
+    });
+
+    radioFeed.scrollTop = radioFeed.scrollHeight;
+    initIcons();
+  }
+
+  function addRadioMessage({
+    direction = 'incoming',
+    sender = 'Renato',
+    role = 'Snowboarder',
+    avatar = '🏂',
+    channel = 'CH-04 · 146.520 MHz FM',
+    recipients = ['All Squad'],
+    text = '',
+    autoSpeak = false
+  }) {
+    const isIncoming = direction === 'incoming';
+
+    // If incoming message arrives while user is on Tactical HUD, bump unread badge
+    if (isIncoming && _activeTab !== 'radio') {
+      _radioUnreadCount++;
+      if (radioUnreadBadge) {
+        radioUnreadBadge.textContent = `${_radioUnreadCount}`;
+        radioUnreadBadge.classList.remove('hidden');
+      }
+    }
+
+    const newMsg = {
+      id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      direction,
+      sender,
+      role,
+      avatar,
+      channel,
+      recipients: Array.isArray(recipients) ? recipients : [recipients || 'All Squad'],
+      text,
+      timeStr: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now()
+    };
+
+    _radioMessages.push(newMsg);
+    renderRadioFeed();
+
+    if (autoSpeak) {
+      VoiceEngine.playRadioSquelch().then(() => {
+        VoiceEngine.aiSpeak(text);
+      });
+    }
+  }
+
+  async function handlePingSquad(args) {
+    const recipients = (args.recipients && args.recipients.length > 0) ? args.recipients : ['All Squad'];
+    const rawMsg = args.text || args.message || args.rawMessage || '';
+    const cleanText = VoiceEngine.formatRadioMessage(rawMsg, recipients, args.eta);
+
+    const activeUser = MountainData.getActiveAccount() || MountainData.squad.you;
+    const isBroadcast = recipients.some(r => /all|everyone|everybody|squad/i.test(r));
+
+    // 1. Post outgoing message to Radio Comms Feed (logged per-profile)
+    addRadioMessage({
+      direction: 'outgoing',
+      sender: activeUser.name,
+      role: activeUser.role,
+      avatar: activeUser.avatar || '⛷️',
+      channel: 'CH-04 · 146.520 MHz FM',
+      recipients: recipients,
+      text: cleanText,
+      autoSpeak: false
+    });
+
+    // 2. Update Tactical Visor HUD squad card
+    showSquadCard(recipients, cleanText, args.eta);
+
+    // 3. APEX AI voice acknowledgement
+    let resp = '';
+    const etaText = args.eta ? `, ETA ${args.eta} minutes` : '';
+    if (isBroadcast) {
+      resp = `Roger, broadcasting to all squad units on Channel 4: "${cleanText}"${etaText}. Over.`;
+    } else {
+      resp = `Roger, radio transmission sent to ${recipients.join(' and ')}: "${cleanText}"${etaText}. Over.`;
+    }
 
     addTranscript('ai', resp);
     await VoiceEngine.aiSpeak(resp);
+
+    // 4. Automated incoming squad response after 2.5s (replies to sender and logs under profile)
+    setTimeout(async () => {
+      const primaryRecip = isBroadcast ? 'Renato' : (recipients[0] || 'Renato');
+      const pLower = primaryRecip.toLowerCase();
+
+      let reply = null;
+      if (pLower.includes('renat')) {
+        reply = {
+          sender: 'Renato',
+          role: 'Snowboarder',
+          avatar: '🏂',
+          text: isBroadcast
+            ? "Apex Base, this is Renato at Panorama Hut. Copying squad broadcast loud and clear! Fireplace is roaring, hot tea ready. Over."
+            : `Apex Base, this is Renato at Panorama Hut. Copy that, ${activeUser.name}! Fireplace is lit and hot tea ready. Take your time on the snow. Over.`
+        };
+      } else if (pLower.includes('kajti')) {
+        reply = {
+          sender: 'Kajti',
+          role: 'Telemark Skier',
+          avatar: '⛷️',
+          text: isBroadcast
+            ? "Kajti on Red Run 4 copying squad broadcast. Snow surface is firm and fast. Proceeding down to sector 3. Over."
+            : `Kajti on Red Run 4 copying your transmission, ${activeUser.name}. Surface is firm and fast. I'll link up with you at the junction. Over.`
+        };
+      } else if (pLower.includes('patrol') || pLower.includes('echo')) {
+        reply = {
+          sender: 'Ski Patrol Echo-1',
+          role: 'Alpine Mountain Rescue',
+          avatar: '⛑️',
+          text: `Ski Patrol Echo-1 acknowledging transmission from ${activeUser.name}. Sector Bravo is clear. Wind picking up near Glacier Peak. Maintain visual contact. Over.`
+        };
+      } else {
+        reply = {
+          sender: primaryRecip,
+          role: 'Squad Member',
+          avatar: '🎿',
+          text: `Copy that, ${activeUser.name}. This is ${primaryRecip} on Channel 4 loud and clear. See you on the snow. Over.`
+        };
+      }
+
+      addRadioMessage({
+        direction: 'incoming',
+        sender: reply.sender,
+        role: reply.role,
+        avatar: reply.avatar,
+        channel: 'CH-04 · 146.520 MHz FM',
+        recipients: [activeUser.name],
+        text: reply.text,
+        autoSpeak: true
+      });
+    }, 2500);
   }
 
   async function handleCheckConditions(args) {
@@ -841,6 +1148,9 @@
         handleSwitchAccount('custom', name, sector);
       });
     }
+
+    // Radio HUD Tabs & Channel Filters
+    initHUDTabs();
   }
 
   // ── Account & Profile Helpers ─────────────────────────────────────
@@ -929,6 +1239,7 @@
     initUI();
     initIcons();
     updateTelemetry();
+    renderRadioFeed();
 
     // Startup message
     setTimeout(() => {

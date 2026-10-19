@@ -96,6 +96,16 @@ When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Ka
   - **Custom Skier**: Register any custom call sign and starting sector!
 - All radar dots, route origins, and telemetry cards synchronize dynamically to the active skier.
 
+### 8. 📻 Dedicated Radio Comms Tab & Per-Profile Channel Logging
+- **HUD Tabs Bar**: Toggle effortlessly between `[VISOR HUD]` (navigation, telemetry, SOS) and `[RADIO COMMS]` (encrypted squad transceiver).
+- **Per-Profile Channel Logging**: Radio messages are tracked per recipient and sender (`Renato`, `Kajti`, `Ski Patrol`, or `All Squad`).
+- **Channel Filter Pills**: Interactive buttons in the header (`[📢 ALL SQUAD]`, `[🏂 Renato]`, `[⛷️ Kajti]`, `[⛑️ Ski Patrol]`) with live count badges filter the transceiver log to specific squad members.
+- **Individual vs Broadcast Targeting**: Address squad members individually (*"Tell Renato..."*, *"Radio Kajti..."*) or broadcast to the entire team (*"Tell everyone..."*, *"Broadcast..."*).
+- **Zero Demo Clutter**: Transceiver starts with a clean slate, logging only authentic operator transmissions and responses.
+- **ASR Normalizer & Alpine Radio Syntax**: Jumbled speech transcripts are automatically normalized into crisp, tactical NATO/Alpine English radio protocol ending with *"Over."*
+- **Two-Way Interactivity**: Transmitting a squad message triggers an automatic, realistic reply from the addressed recipient 2.5 seconds later.
+- **Replay Audio**: Every transmission card includes a `[REPLAY AUDIO]` button that plays procedural radio squelch and English TTS.
+
 ---
 
 ## 🚀 How to Run the Prototype

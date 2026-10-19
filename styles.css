@@ -393,3 +393,106 @@ body {
   50%      { stroke-opacity: 0.8; r: 18; }
 }
 
+/* ─── HUD Navigation Tabs ─── */
+.hud-tab {
+  background: transparent;
+  color: rgba(200, 214, 229, 0.5);
+  border: 1px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.hud-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+.hud-tab.active {
+  background: #1a2236;
+  color: #00e5ff;
+  border-color: rgba(0, 229, 255, 0.4);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
+}
+
+/* ─── Radio Comms Transceiver Cards ─── */
+.radio-card {
+  background: rgba(26, 34, 54, 0.75);
+  border: 1px solid #1e3a5f;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.radio-card:hover {
+  border-color: rgba(0, 229, 255, 0.4);
+}
+.radio-card.incoming {
+  border-left: 3px solid #39ff14;
+  box-shadow: inset 4px 0 12px rgba(57, 255, 20, 0.04);
+}
+.radio-card.outgoing {
+  border-left: 3px solid #00e5ff;
+  background: rgba(18, 30, 50, 0.8);
+  box-shadow: inset 4px 0 12px rgba(0, 229, 255, 0.04);
+}
+
+/* ─── Profile Channel Filter Pills ─── */
+.channel-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: rgba(200, 214, 229, 0.6);
+  background: rgba(26, 34, 54, 0.7);
+  border: 1px solid #1e3a5f;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.channel-filter-pill:hover {
+  color: #ffffff;
+  border-color: rgba(0, 229, 255, 0.4);
+}
+.channel-filter-pill.active {
+  background: #10263f;
+  color: #00e5ff;
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+.channel-filter-pill .badge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(0, 229, 255, 0.15);
+  color: #00e5ff;
+}
+.channel-filter-pill.active .badge {
+  background: #00e5ff;
+  color: #0a0e17;
+}
+
+.radio-audio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: #00e5ff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.radio-audio-btn:hover {
+  background: rgba(0, 229, 255, 0.22);
+  border-color: #00e5ff;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+

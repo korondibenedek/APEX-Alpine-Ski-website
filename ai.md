@@ -304,6 +304,76 @@ Authored a complete [`README.md`](file:///home/benedek/SÍapp/README.md) documen
 - **Quick Demo Guide**: Table of clickable and voice-driven test phrases for rapid verification.
 - **Zero-Build Run Instructions**: Step-by-step instructions for launching with Python HTTP server or Live Server with zero external dependencies.
 
+---
+
+## 14. Radio Comms Dedicated Tab & Alpine Translation Engine
+
+### Felhasználói kérés:
+> *"legyen egy külön fül ahova be érkeznek az rádió üzenetek és minden üzenetet fordíts ne feltétlen egy összevissza üzenetet küldj"*
+
+### Implementáció és Rendszerarchitektúra:
+
+1. **Dedikált HUD Navigációs Fül-rendszer (`index.html`, `styles.css`)**:
+   - A jobb oldali Helmet Visor HUD fejlécébe beépítésre került egy kétállású fülsor:
+     - `[VISOR HUD]`: Taktikai navigáció, Dijkstra útvonal-tervek, telemetria kártya, SOS jelzőfény és AI hangátirat.
+     - `[RADIO COMMS]`: Dedikált rádió adóvevő felület (`CH-04 SQUAD TRANSCEIVER · 146.520 MHz FM`), titkosított rádiófolyam és élő magyar fordítások.
+   - **Olvasatlan üzenet jelző (`#radioUnreadBadge`)**: Ha a felhasználó a Taktikai HUD nézetben van és beérkezik egy új rádióadás, a fülön pulzáló számláló jelzi az új beérkezett adásokat. A fülre kattintva a számláló automatikusan törlődik.
+
+2. **Rádióüzenet Tisztító és Magyar Fordító Motor (`formatAndTranslateRadioMessage` a `voice-engine.js`-ben)**:
+   - Ahelyett, hogy nyers, töredezett beszédfelismerési átiratokat küldenénk szét a rádión, a motor a beszédet elemzi (állomások, pályaszínek, találkozási szándékok, veszélyek, ETA) és két kristálytiszta változatot hoz létre:
+     - **Taktikai angol rádióadás (`textEn`)**: Autentikus NATO/Alpine rádiózsargon, professzionális tömörség, *"Over."* adásvégi rádiókóddal.
+     - **Magyar fordítási kártya (`textHu`)**: Természetes, katonás és hegyimentő terminológiával megfogalmazott magyar fordítás, *"Vétel."* lezárással.
+   - Teljes kétirányú szótár és mintafelismerés:
+     - *Rendezvous / Találkozó*: `"Squad rendezvous at [Station]. Descending via [Trail]. ETA ~[X] min. Over."` ↔ `"Csapattalálkozó a következő pontnál: [Állomás]. A(z) [Pálya] ereszkedem. Becsült érkezés: kb. [X] perc múlva. Vétel."`
+     - *Veszély / Jég figyelmeztetés*: `"Caution to all squad units: Hazard and icy surface reported near [Station]. Reduce speed. Over."` ↔ `"Figyelem minden csapattagnak: Veszélyes, jeges pályaszakasz jelentve [Állomás] közelében. Csökkentsétek a sebességet! Vétel."`
+     - *Ereszkedés / Pályaválasztás*: `"Descending via [Trail] towards [Station]. Proceeding with caution. Over."` ↔ `"Ereszkedem a(z) [Pálya] vonalon [Állomás] felé. Óvatosan haladok tovább. Vétel."`
+
+3. **Kétoldalú Interaktív Rádióforgalom (`app.js`)**:
+   - **Kimenő adás rögzítése**: A felhasználó kimenő rádióüzenete azonnal megjelenik a `RADIO COMMS` fülön (ciánkék kerettel és `OUTGOING` jelzéssel).
+   - **Automatikus csapattárs válasz**: Amikor a síelő rádiót küld (pl. Renatónak vagy Kajtinak), a címzett 2.5 másodperces késleltetéssel automatikusan visszaválaszol a rádiókörön (rádiós sercegés kíséretében).
+   - **Azonnali szimulációs gombok**:
+     - `🏂 Renato @ Hut`: Renato bejelentkezése a meleg kandalló és forró tea mellől a Panoráma hüttéből.
+     - `⛷️ Kajti @ Red 4`: Kajti helyzetjelentése a Piros 4-es pályáról a keményre fagyott hóról.
+     - `⛑️ Patrol @ Mid`: A Hegyi Járőr biztonsági felhívása a lavinaveszélyes szakaszokról.
+   - **`🔊 REPLAY AUDIO` Gomb**: Bármelyik rádiókártyán lévő gomb megnyomásakor lejátssza az eljárásos fehérzaj-sercegést (`playRadioSquelch`), majd tisztán bemondja a rádióüzenetet angolul.
+
+---
+
+## 15. Profilonkénti Rádió Naplózás, Demo Üzenetek & Fordítás Eltávolítása
+
+### Felhasználói kérés:
+> *"nem kellenek bele demo message-ek és külön lehessen küldeni mindenkinek ezt profilonként logolja , de ez ne zárja ki azt hogy mindenkinek lehet küldeni egyszerre és nem kell bele magyar fordítás"*
+
+### Változtatások és Fejlesztések:
+
+1. **Előre generált Demo üzenetek törlése**:
+   - Eltávolításra került a `seedInitialRadioMessages` indítási fiktív üzenetcsomag és a fejléc szimulációs gombjai.
+   - A rádió fül tiszta, üres állapottal indul (*"NO TRANSMISSIONS LOGGED — Target frequency clear"*), kizárólag a valós felhasználói adásokat és az azokra érkező válaszokat naplózza.
+
+2. **Magyar fordítási doboz eltávolítása**:
+   - Megszűnt a `radio-hu-box` és a `textHu` mező.
+   - A rádiófolyam kizárólag professzionális, kristálytiszta taktikai angol rádióüzeneteket jelenít meg (*"Over."* lezárással), kiküszöbölve a nyers beszédhibákat és az átláthatatlan dobozokat.
+
+3. **Címzés: Egyéni személyre küldés vs. Mindenkinek szóló Broadcast**:
+   - **Egyéni csapattárs megszólítása**:
+     - Hanggal: *"Tell Renato I'm descending via Blue Trail"*, *"Mondd meg Kajtinak hogy vigyázzon a jégre"*, *"Radio Ski Patrol..."*
+     - A rendszer automatikusan észleli a konkrét személyt (`recipients: ['Renato']`), a kimenő adást kifejezetten az ő csatornájára irányítja.
+     - A címzett 2.5 másodperc múlva közvetlenül a küldőnek válaszol (*"Apex Base, this is Renato... Copy that, Benedek!"*).
+   - **Mindenkinek szóló Broadcast (Broadcast All)**:
+     - Hanggal: *"Tell everyone meet at main valley base"*, *"Broadcast to squad..."*, *"Mindenkinek..."*
+     - A rendszer globális broadcast adásként küldi el (`recipients: ['All Squad']`).
+     - A csapat nyugtázza az össznépi adást.
+
+4. **Profilonkénti szűrés és naplózás (`_radioMessages` & Channel Filter Pills)**:
+   - A rádió fejlécében dinamikus csatornaszűrő gombok kaptak helyet élő számláló jelvényekkel:
+     - `[📢 ALL SQUAD]` (összes forgalmazás)
+     - `[🏂 Renato]` (kizárólag a Renato felé küldött és tőle érkező adások)
+     - `[⛷️ Kajti]` (kizárólag a Kajtival folytatott rádiózás)
+     - `[⛑️ Ski Patrol]` (a hegyimentőkkel folytatott forgalom)
+   - Bármelyik profilra kattintva a napló azonnal átszűr az adott csapattárs történetére.
+
+
+
 
 
 

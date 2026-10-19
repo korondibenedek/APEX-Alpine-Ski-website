@@ -588,30 +588,129 @@ const VoiceEngine = (() => {
     return args;
   }
 
+  function formatRadioMessage(rawText, recipients = [], eta = null) {
+    const text = (rawText || '').trim();
+    const lower = text.toLowerCase();
+
+    // 1. Resolve any mentioned station / node
+    let targetNodeId = null;
+    let targetNodeNameEn = '';
+
+    const nodeMatch = MountainData.resolveNodeName(lower);
+    if (nodeMatch && MountainData.nodes[nodeMatch]) {
+      targetNodeId = nodeMatch;
+      targetNodeNameEn = MountainData.nodes[nodeMatch].name;
+    }
+
+    // 2. Trail color detection
+    let trailEn = '';
+    if (/blue|kék|kek/i.test(lower)) {
+      trailEn = 'Blue Trail';
+    } else if (/red|piros/i.test(lower)) {
+      trailEn = 'Red Run';
+    } else if (/black|fekete/i.test(lower)) {
+      trailEn = 'Black Run';
+    }
+
+    // 3. ETA phrasing
+    const etaEn = eta ? ` ETA ~${eta} min.` : '';
+
+    // 4. Hazard alert (checked first so "ice near hut" or "watch out" takes precedence)
+    if (/ice|icy|jeg|jég|wind|szél|szel|fog|köd|kod|caution|vigyáz|vigyazz|hazard|watch out|look out/i.test(lower)) {
+      const destStrEn = targetNodeNameEn ? ` near ${targetNodeNameEn}` : '';
+      return `Caution to all squad units: Hazard and icy surface reported${destStrEn}. Reduce speed and stay visible. Over.`;
+    }
+
+    // 5. Check for Rendezvous / Meeting at station
+    if (/meet|találkoz|talalkoz|rendezvous|várj|varj|waiting|see you|\bhuts?\b|hütt|hutte|\bstations?\b|állomás|allomas|lodge/i.test(lower) && targetNodeNameEn) {
+      const trailPhraseEn = trailEn ? ` Descending via ${trailEn}.` : '';
+      return `Squad rendezvous at ${targetNodeNameEn}.${trailPhraseEn}${etaEn} Over.`;
+    }
+
+    // 6. Check for taking trail / descending
+    if (trailEn || /taking|heading|going down|ereszked|csúsz|csusz|megyek|jövök|jovok|tartok/i.test(lower)) {
+      const trailStrEn = trailEn || 'the marked run';
+      const destStrEn = targetNodeNameEn ? ` towards ${targetNodeNameEn}` : '';
+      return `Descending via ${trailStrEn}${destStrEn}.${etaEn} Proceeding with caution. Over.`;
+    }
+
+    // 7. Status check / check-in
+    if (/status|helyzet|hol vagytok|where are|ready|kész|kesz|radio check/i.test(lower)) {
+      return `Squad radio check. Transceiver online, telemetry operational. Standing by for position report. Over.`;
+    }
+
+    // 8. General clean-up fallback
+    let clean = text
+      .replace(/^(?:tell|ping|message|radio)\s+(?:renato|kajti|ski patrol|patrol|squad|the squad|everyone|everybody|all)?\s*(?:and\s+[a-z]+)?\s*(?:that)?\s*/i, '')
+      .replace(/^(?:mondd meg|szólj|szolj|üzend meg|üzenj)\s+(?:a\s+)?(?:renátónak|renatonak|kajtinak|síjárőrnek|sijarornek|járőrnek|jarornek|csapatnak|mindenkinek)?\s*(?:hogy)?\s*/i, '')
+      .trim();
+
+    if (!clean) clean = text;
+
+    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+    if (!clean.endsWith('.')) clean += '.';
+
+    return `${clean}${etaEn} Over.`;
+  }
+
   function extractSquadArgs(text) {
     const lower = text.toLowerCase();
     const recipients = [];
 
-    const personMatch = MountainData.matchBestPerson(lower);
-    if (personMatch) {
-      recipients.push(personMatch.account.name);
+    // Check for explicit broadcast keywords
+    const isBroadcast = /\b(everyone|everybody|all units|all squad|the squad|squad|broadcast|mindenki|mindenkinek|csapat|csapatnak)\b/i.test(lower);
+
+    if (!isBroadcast) {
+      // Check known accounts for explicit mention
+      const accounts = MountainData.getAccounts();
+      for (const acc of accounts) {
+        const nameLower = acc.name.toLowerCase();
+        if (new RegExp('\\b' + nameLower + '\\b', 'i').test(lower)) {
+          if (!recipients.includes(acc.name)) recipients.push(acc.name);
+        }
+      }
+
+      // Check common squad aliases
+      if (/renat[oó]/i.test(lower) && !recipients.includes('Renato')) recipients.push('Renato');
+      if (/kajti/i.test(lower) && !recipients.includes('Kajti')) recipients.push('Kajti');
+      if (/patrol|hegyiment|ment[oö]k/i.test(lower) && !recipients.includes('Ski Patrol')) recipients.push('Ski Patrol');
+
+      // Fuzzy fallback if still empty
+      if (recipients.length === 0) {
+        const personMatch = MountainData.matchBestPerson(lower);
+        if (personMatch) {
+          recipients.push(personMatch.account.name);
+        }
+      }
     }
 
-    if (recipients.length === 0) {
-      recipients.push('Renato', 'Kajti'); // default: broadcast
+    // If still empty or broadcast explicitly requested
+    if (recipients.length === 0 || isBroadcast) {
+      recipients.length = 0;
+      recipients.push('All Squad');
     }
 
     // Extract ETA
     let eta = null;
-    const etaMatch = lower.match(/(\d+)\s*(min|minute)/i);
+    const etaMatch = lower.match(/(\d+)\s*(min|minute|perc)/i);
     if (etaMatch) eta = parseInt(etaMatch[1]);
 
     // Extract message gist
     let message = text;
-    const msgMatch = text.match(/(?:tell|ping|message|radio)\s+(?:[a-z0-9#\s]+?)\s+(?:that\s+)?(.+)/i);
+    const msgMatch = text.match(/(?:tell|ping|message|radio|mondd meg|szolj|üzenj)\s+(?:[a-z0-9#\s]+?)\s+(?:that|hogy)?\s*(.+)/i);
     if (msgMatch) message = msgMatch[1];
 
-    return { recipients, message, eta };
+    const formattedText = formatRadioMessage(text, recipients, eta);
+
+    return {
+      recipients,
+      isBroadcast: recipients.includes('All Squad'),
+      message: formattedText,
+      rawMessage: message,
+      text: formattedText,
+      textEn: formattedText,
+      eta
+    };
   }
 
   function extractSOSArgs(text) {
@@ -831,6 +930,9 @@ Be concise, tactical, and use a confident ski-wingman radio tone. Use function c
     processInput,
     aiSpeak,
     playRadioSquelch,
+    formatRadioMessage,
+    formatAndTranslateRadioMessage: formatRadioMessage,
+    extractSquadArgs,
     get isListening() { return isListening; },
     get isSpeaking() { return _isSpeaking; },
     set geminiApiKey(key) { geminiApiKey = key; },

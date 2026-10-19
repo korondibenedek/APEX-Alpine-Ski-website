@@ -262,9 +262,9 @@
          ══════════════════════════════════════════════════════════════ -->
     <section id="hudPanel" class="w-[40%] h-full flex flex-col bg-hud-panel/50 relative overflow-hidden">
 
-      <!-- HUD Title -->
-      <div class="px-4 pt-3 pb-2 border-b border-hud-border flex-shrink-0">
-        <div class="flex items-center justify-between">
+      <!-- HUD Title + Tabs -->
+      <div class="px-4 pt-3 pb-2 border-b border-hud-border flex-shrink-0 bg-hud-panel/70">
+        <div class="flex items-center justify-between mb-2">
           <div>
             <h2 class="text-sm font-bold text-white tracking-wider flex items-center gap-2">
               <i data-lucide="radio" class="w-4 h-4 text-hud-cyan"></i>
@@ -276,71 +276,143 @@
             <i data-lucide="signal" class="w-3 h-3 text-hud-green"></i> COMMS OK
           </div>
         </div>
+
+        <!-- Navigation Tabs Bar -->
+        <div class="flex items-center gap-1 bg-hud-bg/80 p-0.5 rounded-lg border border-hud-border/60">
+          <button id="tabBtnTactical" class="hud-tab active flex-1 py-1 px-2.5 rounded text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="compass" class="w-3.5 h-3.5 text-hud-cyan"></i>
+            <span>VISOR HUD</span>
+          </button>
+          <button id="tabBtnRadio" class="hud-tab flex-1 py-1 px-2.5 rounded text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 text-hud-text/50 hover:text-white transition relative">
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-hud-green"></i>
+            <span>RADIO COMMS</span>
+            <span id="radioUnreadBadge" class="hidden ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-hud-cyan text-black font-extrabold animate-pulse">0</span>
+          </button>
+        </div>
       </div>
 
       <!-- Scrollable HUD content -->
       <div id="hudContent" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin">
 
-        <!-- ─── Navigation Card ─── -->
-        <div id="navCard" class="hud-card hidden">
-          <div class="hud-card-header">
-            <i data-lucide="navigation" class="w-3.5 h-3.5 text-hud-cyan"></i>
-            <span>ACTIVE NAVIGATION</span>
+        <!-- ═════════ TAB 1: TACTICAL HUD VIEW ═════════ -->
+        <div id="tabViewTactical" class="space-y-3">
+          <!-- ─── Navigation Card ─── -->
+          <div id="navCard" class="hud-card hidden">
+            <div class="hud-card-header">
+              <i data-lucide="navigation" class="w-3.5 h-3.5 text-hud-cyan"></i>
+              <span>ACTIVE NAVIGATION</span>
+            </div>
+            <div id="navCardBody" class="hud-card-body">
+              <p class="text-hud-text/40 text-xs italic">No active route.</p>
+            </div>
           </div>
-          <div id="navCardBody" class="hud-card-body">
-            <p class="text-hud-text/40 text-xs italic">No active route.</p>
-          </div>
-        </div>
 
-        <!-- ─── Squad Comms Card ─── -->
-        <div id="squadCard" class="hud-card hidden">
-          <div class="hud-card-header">
-            <i data-lucide="users" class="w-3.5 h-3.5 text-hud-green"></i>
-            <span>SQUAD COMMS</span>
+          <!-- ─── Squad Comms Card ─── -->
+          <div id="squadCard" class="hud-card hidden">
+            <div class="hud-card-header">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-hud-green"></i>
+              <span>SQUAD COMMS</span>
+            </div>
+            <div id="squadCardBody" class="hud-card-body">
+              <p class="text-hud-text/40 text-xs italic">No messages.</p>
+            </div>
           </div>
-          <div id="squadCardBody" class="hud-card-body">
-            <p class="text-hud-text/40 text-xs italic">No messages.</p>
-          </div>
-        </div>
 
-        <!-- ─── Mountain Telemetry Card ─── -->
-        <div id="telemetryCard" class="hud-card">
-          <div class="hud-card-header">
-            <i data-lucide="thermometer" class="w-3.5 h-3.5 text-hud-amber"></i>
-            <span>MOUNTAIN TELEMETRY</span>
+          <!-- ─── Mountain Telemetry Card ─── -->
+          <div id="telemetryCard" class="hud-card">
+            <div class="hud-card-header">
+              <i data-lucide="thermometer" class="w-3.5 h-3.5 text-hud-amber"></i>
+              <span>MOUNTAIN TELEMETRY</span>
+            </div>
+            <div id="telemetryCardBody" class="hud-card-body">
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+                <div class="flex justify-between"><span class="text-hud-text/50">Wind</span><span id="telWind" class="text-white">12 km/h NW</span></div>
+                <div class="flex justify-between"><span class="text-hud-text/50">Temp</span><span id="telTemp" class="text-hud-blue">-8 °C</span></div>
+                <div class="flex justify-between"><span class="text-hud-text/50">Visibility</span><span id="telVis" class="text-hud-green">Good</span></div>
+                <div class="flex justify-between"><span class="text-hud-text/50">Snow</span><span id="telSnow" class="text-white">Packed Powder</span></div>
+                <div class="flex justify-between col-span-2"><span class="text-hud-text/50">South Bowl Lift</span><span id="telLift" class="text-hud-green">● Open</span></div>
+                <div class="flex justify-between col-span-2"><span class="text-hud-text/50">Black Run Ice</span><span id="telIce" class="text-hud-green">● Clear</span></div>
+              </div>
+            </div>
           </div>
-          <div id="telemetryCardBody" class="hud-card-body">
-            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
-              <div class="flex justify-between"><span class="text-hud-text/50">Wind</span><span id="telWind" class="text-white">12 km/h NW</span></div>
-              <div class="flex justify-between"><span class="text-hud-text/50">Temp</span><span id="telTemp" class="text-hud-blue">-8 °C</span></div>
-              <div class="flex justify-between"><span class="text-hud-text/50">Visibility</span><span id="telVis" class="text-hud-green">Good</span></div>
-              <div class="flex justify-between"><span class="text-hud-text/50">Snow</span><span id="telSnow" class="text-white">Packed Powder</span></div>
-              <div class="flex justify-between col-span-2"><span class="text-hud-text/50">South Bowl Lift</span><span id="telLift" class="text-hud-green">● Open</span></div>
-              <div class="flex justify-between col-span-2"><span class="text-hud-text/50">Black Run Ice</span><span id="telIce" class="text-hud-green">● Clear</span></div>
+
+          <!-- ─── Emergency SOS Card (hidden by default) ─── -->
+          <div id="sosCard" class="hud-card hidden border-red-600/60">
+            <div class="hud-card-header bg-red-900/40 text-red-400">
+              <i data-lucide="siren" class="w-3.5 h-3.5"></i>
+              <span>⚠ EMERGENCY SOS ACTIVE</span>
+            </div>
+            <div id="sosCardBody" class="hud-card-body bg-red-950/20">
+            </div>
+          </div>
+
+          <!-- ─── Voice Transcript Log ─── -->
+          <div class="hud-card flex-1">
+            <div class="hud-card-header">
+              <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-hud-text/60"></i>
+              <span>AI TRANSCRIPT</span>
+            </div>
+            <div id="transcriptLog" class="hud-card-body space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+              <div class="text-[11px] text-hud-text/30 italic">Waiting for voice input…</div>
             </div>
           </div>
         </div>
 
-        <!-- ─── Emergency SOS Card (hidden by default) ─── -->
-        <div id="sosCard" class="hud-card hidden border-red-600/60">
-          <div class="hud-card-header bg-red-900/40 text-red-400">
-            <i data-lucide="siren" class="w-3.5 h-3.5"></i>
-            <span>⚠ EMERGENCY SOS ACTIVE</span>
+        <!-- ═════════ TAB 2: RADIO COMMS ═════════ -->
+        <div id="tabViewRadio" class="hidden space-y-3">
+          <!-- Transceiver Status Banner -->
+          <div class="bg-hud-card border border-hud-border/80 rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-hud-green animate-pulse"></span>
+                <span class="text-white font-bold tracking-wide">CH-04 SQUAD TRANSCEIVER</span>
+              </div>
+              <span class="text-hud-cyan font-bold">146.520 MHz FM</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-hud-text/50 font-mono border-t border-hud-border/40 pt-1.5">
+              <span>ENCRYPTED SQUAD NET</span>
+              <span class="text-hud-green">● SQUELCH ACTIVE · 28 dB SNR</span>
+            </div>
+
+            <!-- Profile Channel Filter Pills -->
+            <div class="pt-2 border-t border-hud-border/40">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[9px] uppercase tracking-widest text-hud-text/40 font-mono">Channel Log Filter:</span>
+                <span id="activeChannelFilterLabel" class="text-[9px] font-mono text-hud-cyan uppercase font-semibold">📢 ALL SQUAD</span>
+              </div>
+              <div id="radioChannelFilters" class="flex flex-wrap gap-1">
+                <button class="channel-filter-pill active" data-channel="all">
+                  <span>📢 ALL SQUAD</span>
+                  <span class="badge" id="badgeCountAll">0</span>
+                </button>
+                <button class="channel-filter-pill" data-channel="Renato">
+                  <span>🏂 Renato</span>
+                  <span class="badge" id="badgeCountRenato">0</span>
+                </button>
+                <button class="channel-filter-pill" data-channel="Kajti">
+                  <span>⛷️ Kajti</span>
+                  <span class="badge" id="badgeCountKajti">0</span>
+                </button>
+                <button class="channel-filter-pill" data-channel="Ski Patrol">
+                  <span>⛑️ Ski Patrol</span>
+                  <span class="badge" id="badgeCountPatrol">0</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <div id="sosCardBody" class="hud-card-body bg-red-950/20">
+
+          <!-- Radio Messages Feed Container -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-hud-text/50">TRANSCEIVER COMMS LOG</span>
+              <span id="radioMsgCount" class="text-[10px] font-mono text-hud-cyan font-bold">0 TRANSMISSIONS</span>
+            </div>
+            <div id="radioFeed" class="space-y-2.5 max-h-[360px] overflow-y-auto scrollbar-thin pr-0.5">
+              <!-- Dynamically populated per profile -->
+            </div>
           </div>
         </div>
 
-        <!-- ─── Voice Transcript Log ─── -->
-        <div class="hud-card flex-1">
-          <div class="hud-card-header">
-            <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-hud-text/60"></i>
-            <span>AI TRANSCRIPT</span>
-          </div>
-          <div id="transcriptLog" class="hud-card-body space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
-            <div class="text-[11px] text-hud-text/30 italic">Waiting for voice input…</div>
-          </div>
-        </div>
       </div>
 
       <!-- ─── Quick Demo Prompts ─── -->
@@ -350,9 +422,10 @@
           <button class="demo-chip" data-prompt="Where is Kajti?">📍 Where is Kajti?</button>
           <button class="demo-chip" data-prompt="Where is Renato?">📍 Where is Renato?</button>
           <button class="demo-chip" data-prompt="Where is Ski Patrol?">⛑️ Where is Patrol?</button>
-          <button class="demo-chip" data-prompt="How do I get to Kajti?">⛷️ Route to Kajti</button>
           <button class="demo-chip" data-prompt="How do I get to Renato?">⛷️ Route to Renato</button>
-          <button class="demo-chip" data-prompt="Tell Renato and Kajti I'm taking the blue trail down, meet me at the hut in 15 minutes.">📻 Ping Squad</button>
+          <button class="demo-chip" data-prompt="Tell Renato I'm taking the blue trail down, meet me at the hut in 15 minutes.">📻 Radio Renato</button>
+          <button class="demo-chip" data-prompt="Tell Kajti watch out for ice on Red Run 4.">📻 Radio Kajti</button>
+          <button class="demo-chip" data-prompt="Tell everyone meet me at Main Valley Base in 20 minutes.">📢 Broadcast All</button>
           <button class="demo-chip" data-prompt="Check conditions">🏔️ Check Conditions</button>
           <button class="demo-chip" data-prompt="MAYDAY! I crashed off-piste near Avalanche Chute, twisted my knee, need Ski Patrol!">🆘 SOS Mayday</button>
         </div>
