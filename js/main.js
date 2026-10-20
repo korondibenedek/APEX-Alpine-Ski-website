@@ -2,12 +2,31 @@
    main.js — APEX Application Entry Point, State Wiring & Event Dispatcher
    ═══════════════════════════════════════════════════════════════════ */
 
-import { MountainData, nodes, simState, getActiveAccount, getAccounts, createProfile, deleteProfile, switchAccount, locateEntity, getConditionsReport, dijkstra } from './data/index.js';
-import { VoiceEngine, aiSpeak, cancelSpeech, formatRadioMessage } from './voice/index.js';
+import {
+  MountainData,
+  nodes,
+  simState,
+  getActiveAccount,
+  getAccounts,
+  createProfile,
+  deleteProfile,
+  switchAccount,
+  locateEntity,
+  getConditionsReport,
+  dijkstra,
+  activeResortMeta,
+  initResort,
+  REAL_RESORTS,
+  deleteCustomResort,
+  getCustomResorts,
+  applyResort
+} from './data/index.js';
+import { VoiceEngine, aiSpeak, formatRadioMessage } from './voice/index.js';
 import { renderEdges, renderNodes, renderSquad, highlightRoute, clearRouteHighlight, updateMapVisuals } from './ui/map-renderer.js';
 import { showNavCard, showSquadCard, showSOSCard, clearSOS, updateTelemetry, addTranscript, flashMapNode, getIsSOSActive } from './ui/tactical-hud.js';
-import { renderRadioFeed, addRadioMessage, renderRadioChannelFilters, getActiveRadioChannel, resetRadioUnreadCount } from './ui/radio-feed.js';
+import { renderRadioFeed, addRadioMessage, renderRadioChannelFilters, resetRadioUnreadCount } from './ui/radio-feed.js';
 import { updateTopBarAccountUI, initProfileCreationControls, renderAccountsModalList, getSelectedColor, getSelectedAvatar } from './ui/profile-manager.js';
+import { initResortSearchUI } from './ui/resort-modal.js';
 
 // Expose on window for browser console debugging / backwards compatibility
 if (typeof window !== 'undefined') {
@@ -19,7 +38,6 @@ if (typeof window !== 'undefined') {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-const mapSVG       = $('#skiMap');
 const edgesGroup   = $('#edgesGroup');
 const nodesGroup   = $('#nodesGroup');
 const squadGroup   = $('#squadGroup');
@@ -37,7 +55,6 @@ const textInput    = $('#textInput');
 const btnSendText  = $('#btnSendText');
 const btnMic       = $('#btnMic');
 const micStatus    = $('#micStatus');
-const waveform     = $('#waveform');
 const clockDisplay = $('#clockDisplay');
 const blizzardOvl  = $('#blizzardOverlay');
 
@@ -60,6 +77,18 @@ const btnSaveKey       = $('#btnSaveKey');
 const geminiKeyInput   = $('#geminiKeyInput');
 const groqKeyInput     = $('#groqKeyInput');
 
+// Resort modal & switcher
+const btnChangeResort              = $('#btnChangeResort');
+const btnTopBarDeleteCustomResort  = $('#btnTopBarDeleteCustomResort');
+const topBarResortName             = $('#topBarResortName');
+const topBarResortAlt              = $('#topBarResortAlt');
+const resortModal                  = $('#resortModal');
+const btnCloseResortModal   = $('#btnCloseResortModal');
+const resortSearchInput     = $('#resortSearchInput');
+const btnAiGenerateResort   = $('#btnAiGenerateResort');
+const resortStatusMessage   = $('#resortStatusMessage');
+const resortsListContainer  = $('#resortsListContainer');
+
 // Account modal & switcher
 const btnSwitchAccount      = $('#btnSwitchAccount');
 const accountModal          = $('#accountModal');
@@ -70,8 +99,8 @@ const customAccountRole     = $('#customAccountRole');
 const customAccountSector   = $('#customAccountSector');
 const customColorSelector   = $('#customColorSelector');
 const customAvatarSelector  = $('#customAvatarSelector');
-const btnAddSkierToSquad    = $('#btnAddSkierToSquad');
-const btnLoginCustomAccount = $('#btnLoginCustomAccount');
+const btnCreateSkierProfile = $('#btnCreateSkierProfile');
+const chkAutoLoginCreated   = $('#chkAutoLoginCreated');
 const topBarAccountName     = $('#topBarAccountName');
 const topBarAccountLoc      = $('#topBarAccountLoc');
 
@@ -106,13 +135,44 @@ function initIcons() {
   }
 }
 
+// ── Top Bar Resort & Sector Dropdown UI Helpers ─────────────────────
+function updateTopBarResortUI() {
+  if (topBarResortName) topBarResortName.textContent = activeResortMeta.name || 'Mount Apex';
+  if (topBarResortAlt) topBarResortAlt.textContent = activeResortMeta.altitude ? `${activeResortMeta.altitude.toLocaleString()}m` : '3,200m';
+
+  const isCustom = activeResortMeta.id.startsWith('img_') || activeResortMeta.id.startsWith('custom_') || activeResortMeta.id.startsWith('proc_') || getCustomResorts().some(r => r.id === activeResortMeta.id);
+  if (btnTopBarDeleteCustomResort) {
+    if (isCustom) {
+      btnTopBarDeleteCustomResort.classList.remove('hidden');
+      btnTopBarDeleteCustomResort.classList.add('flex');
+    } else {
+      btnTopBarDeleteCustomResort.classList.add('hidden');
+      btnTopBarDeleteCustomResort.classList.remove('flex');
+    }
+  }
+}
+
+function updateSectorDropdown() {
+  if (!customAccountSector) return;
+  const currentVal = customAccountSector.value;
+  customAccountSector.innerHTML = Object.entries(nodes).map(([id, n]) => {
+    return `<option value="${id}">${n.name} (${n.altitude}m)</option>`;
+  }).join('');
+  if (nodes[currentVal]) {
+    customAccountSector.value = currentVal;
+  }
+}
+
 // ── Refresh Full UI State ───────────────────────────────────────────
 function refreshAll() {
+  updateTopBarResortUI();
+  updateSectorDropdown();
   renderEdges(edgesGroup);
   renderNodes(nodesGroup, (node) => {
     // Clicking node sets destination for quick routing
+    const activeAcc = getActiveAccount();
     handlePlanSkiRoute({
-      from: MountainData.squad.you?.currentNode || 'glacierPeak',
+      from: activeAcc?.location || MountainData.squad.you?.currentNode || Object.keys(nodes)[0],
       to: node.id
     });
   });
@@ -697,15 +757,76 @@ function initUI() {
   });
 
   // Profile creation
-  btnAddSkierToSquad?.addEventListener('click', () => handleCreateProfile(false));
-  btnLoginCustomAccount?.addEventListener('click', () => handleCreateProfile(true));
+  btnCreateSkierProfile?.addEventListener('click', () => {
+    const autoLogin = chkAutoLoginCreated ? chkAutoLoginCreated.checked : true;
+    handleCreateProfile(autoLogin);
+  });
 
   initProfileCreationControls({ customColorSelector, customAvatarSelector });
+
+  // Resort modal & switcher
+  let resortUI = null;
+  if (resortModal) {
+    resortUI = initResortSearchUI({
+      resortModal,
+      resortSearchInput,
+      resortsListContainer,
+      btnAiGenerateResort,
+      resortStatusMessage,
+      onResortChanged: async (resort) => {
+        clearRouteHighlight(routeHL);
+        refreshAll();
+        renderRadioChannelFilters(radioChannelFilters, () => {
+          renderRadioFeed(radioFeed, { radioMsgCount, activeChannelFilterLabel });
+        });
+        const active = getActiveAccount();
+        const locName = nodes[active.location]?.name || 'Base';
+        const msg = `Terrain loaded: ${resort.name} (${resort.country}), summit at ${resort.altitude} meters. Piste graph and squad telemetry synchronized. Ready for routing.`;
+        addTranscript(transcriptLog, 'system', `🏔️ Active terrain switched to: ${resort.name} (${resort.country}) · Summit: ${resort.altitude}m · Operator at ${locName}`);
+        await aiSpeak(msg);
+      }
+    });
+
+    btnChangeResort?.addEventListener('click', () => {
+      resortModal.classList.remove('hidden');
+      if (resortSearchInput) resortSearchInput.value = '';
+      if (resortStatusMessage) resortStatusMessage.classList.add('hidden');
+      resortUI?.refreshList('');
+      initIcons();
+    });
+
+    btnCloseResortModal?.addEventListener('click', () => {
+      resortModal.classList.add('hidden');
+    });
+
+    resortModal.addEventListener('click', (e) => {
+      if (e.target === resortModal) resortModal.classList.add('hidden');
+    });
+
+    btnTopBarDeleteCustomResort?.addEventListener('click', async () => {
+      const currentId = activeResortMeta.id;
+      const currentName = activeResortMeta.name || 'Generált síterep';
+      if (confirm(`Félrement a képfelismerés? Biztosan törölni szeretnéd a(z) "${currentName}" terepet és visszaállítod az eredeti Mount Apex terepet?`)) {
+        deleteCustomResort(currentId);
+        applyResort(REAL_RESORTS.mountApex);
+        clearRouteHighlight(routeHL);
+        refreshAll();
+        renderRadioChannelFilters(radioChannelFilters, () => {
+          renderRadioFeed(radioFeed, { radioMsgCount, activeChannelFilterLabel });
+        });
+        addTranscript(transcriptLog, 'system', `🗑️ Törölve: ${currentName}. Alapértelmezett Mount Apex terep visszaállítva.`);
+        resortUI?.refreshList('');
+        await aiSpeak('Custom terrain deleted. Returning to Mount Apex.');
+      }
+    });
+  }
+
   initHUDTabs();
 }
 
 // ── Application Boot ────────────────────────────────────────────────
 export function boot() {
+  initResort();
   refreshAll();
   initSimControls();
   initVoiceEngine();
@@ -715,7 +836,9 @@ export function boot() {
   setTimeout(() => {
     const active = getActiveAccount();
     const locName = nodes[active.location]?.name || 'Glacier Peak';
-    addTranscript(transcriptLog, 'ai', `🏔️ APEX online. Mount Apex, 3200 meters. Operator: ${active.name} at ${locName}. Squad voice network online. What's the play, rider?`);
+    const resortName = activeResortMeta.name || 'Mount Apex';
+    const alt = activeResortMeta.altitude || 3200;
+    addTranscript(transcriptLog, 'ai', `🏔️ APEX online. ${resortName}, ${alt} meters. Operator: ${active.name} at ${locName}. Squad voice network online. What's the play, rider?`);
   }, 500);
 }
 

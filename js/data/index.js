@@ -2,7 +2,8 @@
    index.js — Unified MountainData Module Export
    ═══════════════════════════════════════════════════════════════════ */
 
-import { nodes, edges, simState } from './resort-graph.js';
+import { nodes, edges, simState, activeResortMeta, setResortData } from './resort-graph.js';
+import { REAL_RESORTS } from './resorts-db.js';
 import {
   DEFAULT_ACCOUNTS,
   loadAccounts,
@@ -28,11 +29,27 @@ import {
 } from './fuzzy-matcher.js';
 import { getConditionsReport } from './telemetry.js';
 import { buildAdjacency, dijkstra } from '../algorithms/dijkstra.js';
+import {
+  getAllPresets,
+  searchPresetResorts,
+  generateResortWithAI,
+  generateProceduralResort,
+  generateResortFromImage,
+  getCustomResorts,
+  saveCustomResort,
+  deleteCustomResort,
+  extractResortNameFromFilename,
+  applyResort,
+  initResort,
+  getActiveResortId,
+} from './resort-loader.js';
 
 export {
   nodes,
   edges,
   simState,
+  activeResortMeta,
+  setResortData,
   DEFAULT_ACCOUNTS,
   loadAccounts,
   saveAccounts,
@@ -55,12 +72,28 @@ export {
   getConditionsReport,
   buildAdjacency,
   dijkstra,
+  getAllPresets,
+  searchPresetResorts,
+  generateResortWithAI,
+  generateProceduralResort,
+  generateResortFromImage,
+  getCustomResorts,
+  saveCustomResort,
+  deleteCustomResort,
+  extractResortNameFromFilename,
+  applyResort,
+  initResort,
+  getActiveResortId,
+  REAL_RESORTS,
 };
 
 export const MountainData = {
   nodes,
   edges,
   simState,
+  activeResortMeta,
+  setResortData,
+  REAL_RESORTS,
   get squad() { return squad; },
   dijkstra,
   resolveNodeName,
@@ -76,5 +109,17 @@ export const MountainData = {
   matchBestPerson,
   similarity,
   normalizeText,
+  getAllPresets,
+  searchPresetResorts,
+  generateResortWithAI,
+  generateProceduralResort,
+  generateResortFromImage,
+  getCustomResorts,
+  saveCustomResort,
+  deleteCustomResort,
+  extractResortNameFromFilename,
+  applyResort,
+  initResort,
+  getActiveResortId,
 };
 

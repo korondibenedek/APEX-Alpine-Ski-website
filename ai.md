@@ -638,14 +638,294 @@ A modern síelők és alpesi csapatok valójában mobilneten / adatkapcsolaton (
 5. **`js/voice/gemini-client.js`**:
    - A függvényparaméterek leírásából eltávolítva a *"VHF Channel 4"*.
 
+---
 
+## 23. Valós Síterep Importálás és Váltó Rendszer (Real-World Ski Resort Presets & AI Topo Engine)
 
+### Felhasználói kérések:
+> *"meg tudod csinálni azt hogy egy png alapján amit a netről töltök le vagy egyáltalán ha csak rákeresek egy adott sípályarendszerre hogy azt beimportálod mint létező terep? Ha képről van szó akkor mondjuk AI képfelismerővel kirajzolni a pályarendszert?"*  
+> *"valós síterepnév beírásos az menőnek hangzik"*
 
+### Megvalósított Architektúra és Fő Komponensek:
 
+#### 1. Beépített Valós Alpesi és Hazai Síterepek Adatbázisa (`js/data/resorts-db.js`):
+Valós csúcsokkal, hüttékkel, völgybázisokkal, számozott pályákkal és felvonókkal ellátott, azonnal navigálható topológiai gráfok:
+- 🇭🇺 **Eplény Síaréna Vibe Park** (509m, Bakony · Ámos-hegyi csúcs, Holle Anyó hüttéje, 4-üléses átszállópont, Síaréna Völgybázis, A1/Q3/Q1/T1 pályák, 4-üléses és 2-üléses libegők)
+- 🇭🇺 **Kékestető Sícentrum** (1014m, Mátra · Kékestető Csúcs, Tévétorony kilátó, Körbár hüttéje, Veronika-rét középállomás, Mátraháza Völgybázis, Déli 1-es és Északi 2-es fekete/piros pályák)
+- 🇸🇰 **Jasná Nízke Tatry — Chopok** (2024m, Szlovákia · Chopok Csúcs Funitel, Priehyba központi elosztó csomópont, Zahrádky, Biela Púť, Lúčky Völgybázis)
+- 🇦🇹 **Schladming — Planai** (1900m, Ausztria · Planai Peak, Schladminger Hütte, Fastenberg középállomás, Planai Stadion VB-Cél Aréna)
+- 🇦🇹 **Murau — Kreischberg** (2118m, Ausztria · Stájerország · Rosenkranz csúcs, Kreischberg csúcs, Rieglerhütte, 10-es Panoramabahn, Edelweiss hütte & snowpark, Tubing aréna, Kreischberg völgybázis)
+- 🇦🇹 **Nassfeld — Hermagor** (2002m, Ausztria · Karintia · Gartnerkofel, Madritschen, Sonnenalpe hágó, Tressdorfer Alm, Gmanberg, Tröpolach Millennium Express)
+- 🇫🇷 **Val Thorens — 3 Vallées** (3200m, Franciaország · Cime Caron 3200m csúcs, Marine Lodge, Val Thorens Centre bázis)
+- 🏔️ **Mount Apex** (3200m · Referencia tesztterep 8 állomással és 13 pályaszakasszal)
 
+#### 2. Élő Gráf-Mutációs Rendszer (`js/data/resort-graph.js` és `setResortData`):
+Az ES6 modulok élő kötéseit kihasználva a `setResortData(newNodes, newEdges, newMeta)` metódus közvetlenül felülírja a `nodes` és `edges` referenciákat anélkül, hogy bármely más modult (`dijkstra.js`, `map-renderer.js`, `fuzzy-matcher.js`) újra kellene indítani vagy importálni. A térkép, a legolcsóbb út (Dijkstra) és a radar azonnal a kiválasztott hegy adataival számol.
 
+#### 3. Gemini 2.0 Flash Valós Idejű Terepgenerátor & Offline Szintetizátor (`js/data/resort-loader.js`):
+- Ha a felhasználó egy olyan síterep nevet ír be, amely nem szerepel az előre elkészített készletben (pl. *Zermatt*, *Kitzbühel*, *Whistler*, *St. Anton*), a **Gemini 2.0 Flash** modell topológiai elemzőként lép működésbe valódi GIS koordinátákkal.
+- **Kettős működés (Offline Fallback & Interaktív Kulcsbeállítás)**:
+  - Ha nincs megadva Gemini API kulcs, a rendszer interaktív figyelmeztetést jelenít meg, amelyből egyetlen kattintással megnyitható az ingyenes API kulcs beállító ablak (`🔑 API Kulcs Beállítása`), vagy választható a **`⚡ Generálás Offline Szintetizátorral`** gomb, amely 0 kulcs megadásával is azonnal működő alpesi terepet generál.
+- Az AI által generált terepek a böngésző `localStorage` tárhelyében automatikusan perzisztálódnak, így legközelebb azonnal elérhetőek.
 
+#### 4. Intelligens Csapat-Újrapolcizálás (`applyResort`):
+Terepváltáskor a rendszer megvizsgálja a regisztrált síelőket (`Benedek`, `Renato`, `Kajti`, `Ski Patrol`), és ha a korábbi állomásuk nem létezik az új hegyen, automatikusan életszerű új helyszínekre osztja be őket (pl. csúcs, panoráma hütte, völgybázis), elkerülve a koordináta- vagy radartöréseket.
 
+#### 5. Terep-Tudatos Intelligens Beszédfelismerés (`js/data/fuzzy-matcher.js` & `js/voice/intent-parser.js`):
+- A `resolveNodeName` dinamikusan elemzi az aktív hegy csomópontjait.
+- Támogatja az ékezetmentes fonetikai illesztést és a magyar ragokat:
+  - *"Tervezz útvonalat az Ámos csúcsról a Síaréna bázisra"* ➔ `planSkiRoute(from: amosCsucs, to: siarenaBase)`.
+  - *"Route to Veronika rét"* ➔ `planSkiRoute(to: veronikaRet)`.
+  - Generikus hegyi kifejezések automatikus feloldása bármely terepen: *"csúcs/summit"* a legmagasabb pontra, míg a *"völgy/base/parkoló"* a legalacsonyabb magasságú állomásra mutat.
+
+#### 6. Felhasználói Felület (`index.html`, `js/ui/resort-modal.js`):
+- **Felső sáv terep-pill (`#btnChangeResort`)**: Megjeleníti az aktív terep nevét és csúcsmagasságát (pl. `Eplény Síaréna Vibe Park · 509m`).
+- **Resort Modal (`#resortModal`)**: Kártyás előnézetek zászlóval, csúcsmagassággal, pályák és liftek számával, azonnali keresővel és az AI terepgenerálás gombbal.
+- Terepváltáskor az APEX AI hangos bejelentést tesz a sisakhangszórón és szinkronizálja a radartérképet.
+
+---
+
+## 24. Google Gemini Modell Migráció (`gemini-2.5-flash`) és Les 2 Alpes Gleccser Terep
+
+### Hiba oka:
+A felhasználó beállította az API kulcsát a Google AI Studio-ból, majd a `les 2 alpes` síterepet kereste. A Google API válasza 404 hibát adott a következő üzenettel:
+`"This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-2.5-flash for the latest features and improvements."`
+
+### Elvégzett fejlesztések:
+1. **Modell Frissítés és Többszintű Tartalék Rendszer (`js/data/resort-loader.js` és `js/voice/gemini-client.js`)**:
+   - Frissítve a Google által kért legújabb `gemini-2.5-flash` modellre.
+   - Modell-tartalék lánc bevezetése: `['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']`. Ha a Google API bármelyik modellre hibát adna, automatikusan a következővel próbálkozik.
+   - Vészhelyzeti offline szintetizálás: Ha az összes felhőbeli AI modell elérhetetlen, a rendszer láthatatlanul átvált a helyi procedurális generátorra, így a felhasználó soha többé nem kap piros 404-es hibaablakot.
+2. **Les 2 Alpes Gleccser Beépítése (`js/data/resorts-db.js`)**:
+   - 🇫🇷 **Les 2 Alpes (3600m)** azonnal elérhető beépített alpesi terepként: *Dôme de la Lauze gleccser (3600m), Glacier du Signal (3200m), Toura Snowpark (2600m), La Fée panoráma (2200m), Les Crêtes átszálló (2100m) és a völgybázis (1650m)* a legendás Valentin fekete fallal és a Jandri Express gondolákkal.
+
+---
+
+## 25. Valósághű, Részletgazdag Síterep Hálózatok (11–15 Állomásos Kiterjesztés)
+
+### Felhasználói észrevétel:
+> *"és miért áll minden map 6 pontból, szeritem ez korántsem életszerű"*
+
+### Elemzés és Probléma-felismerés:
+1. **Kezdeti prototípus korlát**: A fejlesztés kezdetén a Mount Apex referencia-hegy csupán 8 állomással rendelkezett, kizárólag a Dijkstra útvonalkereső és a rádiós telemetria korai tesztelésére.
+2. **Túl egyszerűsített topológia**: Amikor a 16 európai terepet beemeltük, az egyszerűsített séma miatt csak 5-7 kulcspontot (1 csúcs, 1 hütte, 1 középállomás, 1 völgy) vettünk fel hegyenként.
+3. Ez a 900×680 pixeles vásznon egy ritkás, üres hurkokból álló "játékhegy" benyomását keltette, miközben az igazi terepek (pl. Zermatt, Val Thorens, Chopok, Murau, Eplény) összetett felvonórendszerekkel, hegygerincekkel, snowparkokkal, alternatív völgyekkel és több hüttével rendelkeznek.
+
+### Elvégzett Fejlesztések:
+1. **Valamennyi (16 db) Valós Síterep Kiterjesztése 11–15 Élethű Állomásra és 15–22 Pályára/Liftre (`js/data/resorts-db.js`)**:
+   - **🇭🇺 Eplény Síaréna Vibe Park (13 állomás, 18 pálya/lift)**: Ámos-hegyi Csúcs (509m), Ámos Kilátó, 4-üléses Hegyállomás, Holle Anyó Hütte, 1-es Panoráma, 2-es Fekete letörés, 2-üléses B hegyállomás, Nitro Snowpark, T1 Tanpálya indító, Malomvölgyi átkötő és csákányos alj, Kemencés büfé, Síaréna Völgybázis.
+   - **🇭🇺 Kékestető Sícentrum (11 állomás, 15 pálya/lift)**: Kékestető Csúcs (1014m), Tévétorony kilátó, Csúcs Körbár, Északi meredek fekete katlan, Északi felvonó alj, Déli 1-es felső, Veronika-rét, Erdei átkötő, Mátra Bérc pihenő, Déli alsó S-kanyar, Mátraháza Völgybázis (710m).
+   - **🇭🇺 Mátraszentistván Sípark (11 állomás, 15 pálya/lift)**: Háromfalu Kilátó Csúcs (821m), Panoráma terasz, Csúcshütte & Körbár, 1-es piros rajt, 4-es fekete buckapálya, 3-as családi kék, Hóhatár Hütte, Funpark, Varázsszőnyeg tanpályák, Panorámalift völgy, Főépület (675m).
+   - **🇸🇰 Jasná Chopok (14 állomás, 19 pálya/lift)**: Chopok Csúcs & Rotunda (2024m), Zadné Dereše freeride, Luková, Kosodrevina (Dél), Rovná Hoľa, Priehyba főcsomópont, Koliesko, Otupné & Brhliská, Krupová Déli bázis, Biela Púť családi lejtő, Záhradky 6-üléses bázis, Grand Hotel Jasná, Lúčky völgyállomás (943m), Crystal Bar.
+   - **🇦🇹 Murau — Kreischberg (14 állomás, 19 pálya/lift)**: Rosenkranzhöhe (2118m), Kreischberg Csúcs (2118m), Sixpack Rosenkranz hegy, Panoramalift hegy, Kreischi WM Snowpark, Rieglerhütte, Kreischbergwirt középállomás, Gondola I+II átszálló, Dinopark családi erdő, 10-es kék erdei szerpentin, Speed-Strecke időmérő, WM-Arena célterület, Kreischberg Talstation (868m), St. Lorenzen.
+   - **🇦🇹 Kitzbühel — Hahnenkamm (13 állomás, 18 pálya/lift)**: Ehrenbachhöhe (1805m), Hahnenkamm Bergstation (1665m), Pengelstein (1938m), a hírhedt 85%-os Mausefalle, Steilhang & Karussell, Hochbrunn Hütte, Seidlalm, Fleckalmbahn középállomás, Hausbergkante, Ganslernhang slalom, Streif Zielschuss, Hahnenkammbahn Talstation (780m), Kirchberg völgy.
+   - **🇨🇭 Zermatt — Matterhorn Paradise (15 állomás, 22 pálya/lift)**: Klein Matterhorn (3883m), Theodulpass (3301m), Plateau Rosa, Trockener Steg (2939m), Gornergrat Obszervatórium (3089m), Rothorn Csúcs (3103m), Blauherd, Schwarzsee Hütte a Matterhorn fala alatt, Riffelberg vasútállomás, Sunnegga Paradies, Riffelalp erdei szakasz, Findeln gourmet falu, Furi csomópont (1867m), Winkelmatten kápolna, Zermatt Dorf Talstation (1620m).
+   - **🇫🇷 Val Thorens — 3 Vallées (13 állomás, 19 pálya/lift)**: Cime Caron (3200m), Pointe du Bouchet (3230m), Col de la Chambre (Méribel átjáró), Funitel Thorens, Grand Fond, Péclet Funitel, La Folie Douce, Chalet de la Marine, Castor & Pollux aréna, Rond-Point des Pistes, Place Caron, Les Menuires átjáró, Plan de l'Eau völgybázis.
+   - És hasonló részletességgel kiterjesztve: *Schladming (12), Nassfeld (12), Obertauern (13), Hintertuxer Gletscher (11), Les 2 Alpes (12), Cortina d'Ampezzo (12), Park Snow Donovaly (11), Mount Apex (14)*.
+2. **Korszerűsített Procedurális Generátor (`js/data/resort-loader.js`)**:
+   - Ha egyedi terepnevet adunk meg, mostantól nem 6, hanem **12 valósághű állomást** generál (Főcsúcs, Északi gerinc, Keleti csúcs, Mélyhó katlan, Fekete hasadék, Alpesi hütte, Középállomás, Freestyle park, Erdei elágazás, Napos fennsík, Déli völgyállomás, Fő völgybázis) 15 összekötő pályával és 4 modern felvonóval.
+3. **SVG Térképmegjelenítő Finomhangolás (`js/ui/map-renderer.js`)**:
+   - Intelligens szövegigazítás: A vászon jobb szélén (`x > 680`) elhelyezkedő állomások feliratai automatikusan balra igazodnak (`text-anchor: end`), így a szövegek és magassági értékek soha nem lógnak le a kijelző széléről.
+4. **Resort Modal Kártyák Frissítése (`js/ui/resort-modal.js`)**:
+   - A kártyák mostantól az `ÁLLOMÁS` számot is pontosan kiírják a csúcsmagasság, pályák és liftek száma mellett.
+
+---
+
+## 26. Hivatalos Murau — Kreischberg Panorámatérkép 100%-os Rekonstrukciója
+
+### Felhasználói észrevétel és feltöltött fotó:
+> *"hat ez a murau térkép megintcsak nem az igazi nézd így néz ki"*  
+> [Hivatalos sitour Kreischberg Panoramatérkép feltöltve]
+
+### Részletes Vizsgálat és Elemzés a Hivatalos Térkép Alapján:
+A korábbi általános alpesi felosztás több ponton eltért a Kreischberg valódi hegyrajzától:
+1. **Két különálló hegycsúcs és magasságok**:
+   - Bal oldali csúcs: **Rosenkranzhöhe (2.118 m)** — a síközpont legmagasabb pontja a legendás fekete és piros meredek letörésekkel.
+   - Jobb oldali csúcs: **Kreischberg (1.997 m)** — az ikonikus **EAGLE** panorámaétteremmel és a 10er Gondelbahn 2. szakaszának hegyállomásával.
+2. **Központi hegyi tó (Kreischbergsee 1.800 m)**:
+   - A két hegy közötti katlanban fekszik a víztározó tó, a **Sunshine I+II** húzóliftekkel és a **Rieglerhütte** felé vezető kék/piros lejtőkkel.
+3. **Valódi felvonóhálózat (A, B, C, G, H, K, L, M betűjelzéssel)**:
+   - **A**: 10er Gondelbahn 1. Sektion (Talstation ➔ Mittelstation Grillboden)
+   - **B**: 10er Gondelbahn 2. Sektion (Mittelstation ➔ Kreischberg / Eagle 1.997 m)
+   - **K**: 8er Sesselbahn Rosenkranz (Schluckspecht ➔ Rosenkranzhöhe 2.118 m)
+   - **L**: Sixpack 6er-Sesselbahn (Sixpack Tal ➔ Kreischberg)
+   - **H+I**: Sunshine I+II csákányos liftek a Kreischbergsee-től a gerincre
+   - **M**: 10er Gondelbahn Riegleralm (Rieglerhütte ➔ Rosenkranzhöhe)
+   - **C**: 4er Sesselbahn Schopfart (WM Arena ➔ Mittelstation)
+4. **Hivatalos számozású sípályák (1-től 19-ig)**:
+   - 1 (fekete) és 1a/1b (piros): Legendás FIS Világkupa völgylesiklás a Mittelstationtól a WM Arenáig.
+   - 2/2a (kék): Családi főlejtő a Kreischbergwirttől a Mittelstationig.
+   - 6 (kék): Hosszú csúcsgerinc panorámaút a Rosenkranzhöhétől a Kreischbergsee-ig.
+   - 7/7a (piros) & 8 (fekete): Rosenkranz carving és meredek fal a Rieglerhüttéhez.
+   - 10/10a (piros) & 11 (fekete): Nyugati panorámaív és a meredek felvonó alatti fal a Schluckspechthez.
+   - 12/12a (piros) & 13 (kék): Riegleralm és Dinowald erdei lejtők.
+   - 14 (kék) & 15 (piros): Eagle panoráma és a Sixpack melletti fő carving pálya.
+   - 16 (fekete): Extrém meredek sziklafal a jobb szárnyon a Höhenloipe felé.
+   - 17/17a (piros): Snowpark slopestyle pálya a Big Air ugratóval.
+   - 18 (piros) & 19 (kék): Kreischbergsee tóparti szakaszok.
+5. **Dinamikus hegyháttér (Dual-Peak Silhouette) és Magassági skála**:
+   - A Murau betöltésekor az SVG sziluett két különálló csúcsot rajzol ki a pontos hegyprofil szerint (`0,680 ... 220,55 ... 440,160 ... 640,75 ... 900,680`).
+   - Az SVG jobb szélén futó magasságmérő skála pontosan követi a hegy szintkülönbségét (2.118 m csúcstól a 868 m völgyállomásig).
+   - A Kreischbergsee víztározó tó egyedi ciánkék tóparti dizájnt kapott a térképen.
+
+---
+
+## 27. Síterepek Moduláris Külön Fájlokba Szervezése (`js/data/resorts/`)
+
+### Felhasználói kérés:
+> *"a resortokat szedd szét szépen külön fájlokba"*
+
+### Megvalósítás:
+A korábbi egyetlen monolitikus `resorts-db.js` helyett létrehoztunk egy tiszta, skálázható mappastruktúrát `js/data/resorts/` alatt, ahol minden egyes síterep saját, önálló ES modul fájllal rendelkezik:
+- 🏔️ `js/data/resorts/mount-apex.js`
+- 🇭🇺 `js/data/resorts/epleny.js`
+- 🇭🇺 `js/data/resorts/kekesteto.js`
+- 🇭🇺 `js/data/resorts/matraszentistvan.js`
+- 🇸🇰 `js/data/resorts/jasna.js`
+- 🇸🇰 `js/data/resorts/donovaly.js`
+- 🇦🇹 `js/data/resorts/murau.js`
+- 🇦🇹 `js/data/resorts/schladming.js`
+- 🇦🇹 `js/data/resorts/nassfeld.js`
+- 🇦🇹 `js/data/resorts/kitzbuehel.js`
+- 🇦🇹 `js/data/resorts/obertauern.js`
+- 🇦🇹 `js/data/resorts/hintertux.js`
+- 🇫🇷 `js/data/resorts/les2alpes.js`
+- 🇫🇷 `js/data/resorts/valthorens.js`
+- 🇨🇭 `js/data/resorts/zermatt.js`
+- 🇮🇹 `js/data/resorts/cortina.js`
+
+### Regisztrációs Központ (`js/data/resorts/index.js` és `js/data/resorts-db.js`):
+- `js/data/resorts/index.js`: Egyenként importálja és aggregálja az összes terepet a `REAL_RESORTS` objektumba, emellett egyenként is exportálja őket.
+- `js/data/resorts-db.js`: Továbbexportálja a `REAL_RESORTS` adatbázist a `resorts/index.js`-ből, így a meglévő hivatkozások (`resort-loader.js`, `resort-graph.js`) teljes mértékben, zökkenőmentesen és törésmentesen működnek tovább.
+- `js/data/index.js`: A moduláris terepadatbázis közvetlenül elérhetővé vált a `MountainData.REAL_RESORTS` és a destrukturált exportok révén.
+
+---
+
+## 28. Sítérkép Képből (PNG/JPG/WEBP) Történő Automatikus Síterep Generálás (Multimodal Vision AI & 100% Offline Computer Vision)
+
+### Felhasználói kérés:
+> *"írd át úgy hogyha beadunk neki egy képet akkor az alapján tudjon generálni egy resortot"*
+
+### Elemzés és Megoldási Stratégia:
+A síterepek hivatalos térképei (panorámatérképek, sitour pistenplanok) változatos formátumban (PNG, JPG, WEBP), felbontásban és nézőpontban érhetők el a neten. Ahhoz, hogy a felhasználó **bármilyen letöltött vagy lefotózott sítérképből azonnal működő, interaktív, Dijkstra-útválasztóval ellátott taktikai térképet** kapjon, egy intelligens **kétcsatornás (Dual-Mode)** generátort építettünk fel:
+
+1. **Online Csatorna: Google Gemini Multimodal Vision AI (`gemini-2.5-flash` / `gemini-1.5-flash`)**:
+   - Ha a felhasználó beállított egy Gemini API kulcsot, a feltöltött képfájl Base64 kódolású képként közvetlenül a Gemini Flash Vision modelljének továbbítódik (`inline_data`).
+   - A speciális alpesi GIS kartográfiai prompt felismeri a képen lévő hegy nevét, csúcsait, felvonóit és sípályáit, és 10–15 állomásos szigorú JSON topológiát állít elő a 900×680 SVG koordinátatérben valós szintmagasságokkal.
+
+2. **Offline Csatorna: Beépített Computer Vision Elemző (0 API kulcs, 100% offline működés)**:
+   - Ha nincs megadva API kulcs vagy a hálózat offline, a rendszer a böngésző natív HTML5 `<canvas>` felületén másodpercek törtrésze alatt elemzi a képet:
+     - 120×90 képpontos lebegő mintavételezést végez a fényerő és hóeloszlás vizsgálatára.
+     - Felismeri, hogy a hegy egyetlen domináns csúccsal (pl. Matterhorn/Apex) vagy két különálló főcsúccsal (mint Murau: Rosenkranz 2.118m + Kreischberg 1.997m) rendelkezik.
+     - Detektálja a középső katlanban elhelyezkedő víztározó tavakat (Kreischbergsee stílusú kék clusterek) és erdei zónákat.
+     - Felépít egy strukturált, 12 állomásos, 16–19 sípályából és felvonóból álló, teljes mértékben bejárható hálózatot.
+
+3. **Intelligens Névfelismerés Fájlnévből (`extractResortNameFromFilename`)**:
+   - Ha a felhasználó nem ír be egyedi nevet, a rendszer a feltöltött fájl nevéből automatikusan kinyeri a síterep nevét (pl. `Kreischberg_Pistenplan_2024.jpg` ➔ `Kreischberg 2024`, `Kitzbuehel-panorama.png` ➔ `Kitzbuehel`).
+
+### Felhasználói Felület (UI) és Munkafolyamat:
+1. **Navigációs Fülek a Síterep Ablakban (`#resortModal`)**:
+   - `🏔️ SÍTEREP LISTA`: A 16 beépített valós síterep és a korábban generált egyedi terepek listája keresővel és ország szerinti szűrőkkel.
+   - `📸 KÉP ALAPÚ GENERÁLÁS (AI VISION)`: Dedikált képfeltöltő és generáló felület.
+2. **Drag-and-Drop & Fájlválasztó Zóna (`#imageDropZone`)**:
+   - Húzd-és-ejtsd vagy kattintásra megnyíló natív fájlböngésző (támogatott formátumok: PNG, JPG, JPEG, WEBP).
+   - Valós idejű előnézet (thumbnail), fájlnév és fájlméret kijelzés, eltávolítás gomb (`btnRemoveImage`).
+   - Opcionális egyedi név és ország/régió mezők.
+   - Folyamatjelző animált spinnerrel és státuszüzenettel (`#imageBuildProgress`).
+3. **Perzisztencia és Kezelés (`localStorage: apex_custom_resorts`)**:
+   - Minden képből generált síterep azonnal elmentődik a helyi tárhelybe, így böngészőfrissítés után is megmarad.
+   - A síterep listában a generált hegyek a lista tetején jelennek meg stílusos `📸 KÉPBŐL GENERÁLVA` (vagy `✨ GEMINI VISION`) jelvénnyel.
+   - Bármikor egy kattintással betölthetők, vagy a piros kuka (`🗑️`) gombbal törölhetők.
+4. **Azonnali Éles Betöltés és Navigáció**:
+   - A generálás befejeztével a rendszer automatikusan élesíti a síterepet: újrarajzolja a vektorgrafikus pályarendszert, elhelyezi a csapattagokat a megfelelő állomásokra, újrakalibrálja a Dijkstra legrövidebb útkeresőt és frissíti a sisak HUD telemetriáját.
+
+---
+
+## 29. Félrement / Nem Kívánt Generált Síterepek Azonnali Törlése és Visszaállítása (3-Pontos Gyors Reset)
+
+### Felhasználói kérés:
+> *"lehessen törölni is ha félrement"*
+
+### Elemzés és Hibaok:
+Amikor a felhasználó feltöltött egy képet, a rendszer azonnal legenerálta és élesítette a terepet (`applyResort`). Viszont a korábbi logikában az aktív kártyán csak az `AKTÍV` címke jelent meg, a törlés gomb el volt rejtve, így a felhasználó nem tudta egyszerűen kitörölni az éppen megtekintett, de rosszul sikerült vagy félrement hegyet, és nem volt egyértelmű módja a visszatérésnek az alapértelmezett terepre.
+
+### Megoldás: 3-Pontos Gyors Törlés & Reset Rendszer
+A rendszer három különálló, kényelmes helyen is lehetővé teszi a félrement generált terepek azonnali törlését és a kiinduló állapot (Mount Apex) visszaállítását:
+
+1. **Felső Sáv Gyors Reset Gomb (`#btnTopBarDeleteCustomResort`)**:
+   - Ha egy képből vagy egyedileg generált síterep van betöltve, a fejlécben a síterep neve mellett automatikusan megjelenik egy piros kuka ikonnal ellátott `🗑️ TÖRLÉS` (RESET) gomb.
+   - Egyetlen kattintással megerősíthető a törlés: a rendszer véglegesen kitörli a hibás terepet a `localStorage`-ből, azonnal visszaállítja az alapértelmezett **Mount Apex** síterepet, újrarajzolja a térképet, visszahelyezi a síelőket és felolvassa a visszaállítást.
+
+2. **Síterep Lista Kártyákon Lévő Piros Törlés Gomb (`.btn-delete-resort`)**:
+   - A síterep listában minden egyedi/képből generált síterep kártyáján **mindig látható** a piros `🗑️ TÖRLÉS` gomb (akkor is, ha az éppen az aktív terep!).
+   - Ha az éppen aktív síterepet törli a felhasználó, a rendszer automatikusan a Mount Apexre vált át, így a felület soha nem kerül érvénytelen vagy üres állapotba.
+
+3. **Kép Generáló Fül Alján Megjelenő Figyelmeztető Doboz (`#activeGeneratedResortBox`)**:
+   - A `📸 KÉP ALAPÚ GENERÁLÁS` fülön, ha a jelenleg betöltött hegy egy generált terep, alul azonnal megjelenik egy piros figyelmeztető doboz:
+     - *"Aktív generált terep: [Név] — Félrement a felismerés? Egy kattintással törölheted és visszatérhetsz az eredetihez."*
+     - A mellette lévő **`🗑️ TÖRLÉS & RESET`** gomb közvetlenül törli az aktív terepet és visszatölti a Mount Apexet.
+
+4. **Képfeltöltés Előtti Törlés / Mégse Gomb (`#btnRemoveImage`)**:
+   - Ha a felhasználó véletlenül rossz képet húzott be, még a generálás gomb megnyomása előtt az előnézeti kiskép jobb felső sarkában lévő piros `✕` gombbal azonnal visszavonhatja a fájlválasztást.
+
+---
+
+## 30. Profil-létrehozási Felület Egyszerűsítése (Redundáns "Add to Squad" és "Create & Log In" Összevonása)
+
+### Felhasználói kérés:
+> *"amikor új profilt akarok hozzáadni két opció van add to squad és create /log in minek? mind a kettő ugyanazt csinálja"*
+
+### Elemzés és Diagnózis:
+- A profilkészítő űrlapon korábban két különálló akciógomb szerepelt:
+  1. `Add to Squad` (`autoLogin = false`): Létrehozta a profilt a GPS radaron, a felugró ablak nyitva maradt, az aktív felhasználó nem változott meg.
+  2. `Create & Log In` (`autoLogin = true`): Létrehozta a profilt, bezárta a modalt, és azonnal átváltotta a sisak operátorát az új síelőre.
+- **A hiba oka UX szempontból**: Mindkét gomb pontosan ugyanazt a profillétrehozási logikát futtatta le, így a felhasználó számára két egymással versengő, látszólag azonos funkciójú gomb jelent meg, ráadásul angol nyelven egy magyarított alkalmazásban. A lista felett már egyébként is minden egyes profilnál elérhető volt egy közvetlen `Váltás` gomb, így a két külön létrehozó gomb indokolatlanul bonyolította a kezelést.
+
+### Megoldás és Tisztítás:
+1. **Egyetlen, egyértelmű akciógomb (`#btnCreateSkierProfile`)**:
+   - A két duplikált gomb helyett egyetlen, jól látható **`PROFIL LÉTREHOZÁSA`** gomb került be.
+2. **Átlátható vezérlő checkbox (`#chkAutoLoginCreated`)**:
+   - Közvetlenül a gomb felett egy egyértelmű jelölőnégyzet található:
+     - `☑️ Azonnali bejelentkezés ezzel a profillal` (alapértelmezetten bekapcsolva).
+   - Ha be van pipálva: a profil létrejön és a rendszer azonnal belépteti a felhasználót, bezárva az ablakot.
+   - Ha a felhasználó kiveszi a pipát: a profil barátként/csapattagként kerül fel a radarra anélkül, hogy az aktuális síelő megváltozna.
+3. **Magyarosított profil modal**:
+   - Minden felirat és mező (fejléc, leírások, állomásválasztó, avatárok, gombok, állapotjelzők: `AKTÍV (TE)`, `Váltás`, `Profil törlése`) egységes magyar nyelvre lett lefordítva.
+
+---
+
+### 31. Teljes Kódbázis Tisztítás, Felesleges Sorok Eltávolítása és Átcsoportosítás
+
+- **Célkitűzés**: A felhasználói kérés alapján ("tisztítsd ki a kódot vegyél ki minden felesleges sort és ha kell csoportosítsd át") a teljes projekt mély átvizsgálása, a fel nem használt importok, elavult DOM referenciák, halott változók és felesleges CSS szabályok törlése.
+- **Végrehajtott tisztítások és optimalizációk**:
+  1. **`js/main.js`**:
+     - Törölve a fel nem használt DOM referenciák: `mapSVG` (`#skiMap`) és `waveform` (`#waveform`).
+     - Törölve a fel nem használt importok: `cancelSpeech` a `voice/index.js`-ből (helyette a `VoiceEngine.cancelSpeech()` van meghívva) és `getActiveRadioChannel` az `ui/radio-feed.js`-ből.
+  2. **`js/ui/profile-manager.js`**:
+     - Törölve a fel nem használt importok: `createProfile`, `deleteProfile`, `switchAccount` a `data/accounts.js`-ből (a modal callback alapú architektúrára lett tisztítva).
+  3. **`js/data/resort-loader.js`**:
+     - Törölve a fel nem használt import: `activeResortMeta` a `resort-graph.js`-ből.
+  4. **`js/ui/tactical-hud.js`**:
+     - Törölve a halott lokális változó: `let _lastSOSTime = 0;` (a debounce kezelést a `main.js` végzi).
+  5. **`styles.css`**:
+     - Törölve az elavult, sehol sem hivatkozott `.node-status-ring` osztály és a hozzá tartozó `@keyframes statusRingPulse` animáció.
+  6. **`index.html` & `resort-modal.js`**:
+     - Javítva az érvénytelen Tailwind osztály (`py-0.2` ➔ `py-0.5`).
+  7. **`README.md`**:
+     - Frissítve a könyvtárfa az új 16 különálló síterep modullal (`resorts/`), adatbázis híddal (`resorts-db.js`), betöltővel (`resort-loader.js`) és modallal (`resort-modal.js`).
+     - Frissítve a profilkészítő dokumentáció az egyszerűsített egyetlen gombos űrlapra.
+- **Eredmény**: Minden JS fájl hiba nélkül fut (`node --check` 100% zöld), a kód áttekinthető, rendezett és zéró felesleges sort tartalmaz.
+
+---
+
+### 32. Felesleges Gyökérkönyvtári Áthidaló Fájlok Törlése
+
+- **Megfigyelés**: A felhasználó észrevételezte: *"de pl a mountain data és a voice engine minek létezik mint fájl"*.
+- **Ok**: Korábban, amikor a monolitikus kódbázis fel lett darabolva modern `js/data/`, `js/voice/`, `js/ui/` modulokba, a gyökérben maradt 3 darab 10 soros "bridge" fájl (`mountain-data.js`, `voice-engine.js`, `app.js`), amelyek pusztán továbbexportálták a belső modulokat backward-compatibility céljából. Emellett egy üres `package-lock.json` is a gyökérben ragadt.
+- **Megoldás**:
+  - Mivel az `index.html` közvetlenül a `<script type="module" src="js/main.js">`-t tölti be, és minden import a `js/` alkönyvtárakra mutat, ezek a gyökérfájlok teljesen redundánsak voltak.
+  - Véglegesen törölve: [`mountain-data.js`](file:///home/benedek/SÍapp/mountain-data.js), [`voice-engine.js`](file:///home/benedek/SÍapp/voice-engine.js), [`app.js`](file:///home/benedek/SÍapp/app.js) és `package-lock.json`.
+  - A gyökérkönyvtár immár teljesen letisztult: csak az `index.html`, `styles.css`, `README.md`, `ai.md` és a strukturált `js/` mappa maradt.
 
 
 

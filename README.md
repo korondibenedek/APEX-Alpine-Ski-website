@@ -4,7 +4,7 @@
 
 [![Hiya Voice AI Challenge](https://img.shields.io/badge/Hiya-Voice%20AI%20Challenge-00e5ff?style=for-the-badge)](https://hiya.com)
 [![Stack](https://img.shields.io/badge/Stack-Vanilla%20JS%20%7C%20HTML5%20SVG%20%7C%20Tailwind%20CDN-10b981?style=for-the-badge)](file:///home/benedek/SÍapp/)
-[![Audio API](https://img.shields.io/badge/Audio-Web%20Speech%20API%20%2B%20Web%20Audio%20Synth-f59e0b?style=for-the-badge)](file:///home/benedek/SÍapp/voice-engine.js)
+[![Audio API](https://img.shields.io/badge/Audio-Web%20Speech%20API%20%2B%20Web%20Audio%20Synth-f59e0b?style=for-the-badge)](file:///home/benedek/SÍapp/js/voice/index.js)
 [![Zero Build](https://img.shields.io/badge/Build-Zero%20Dependencies%20(No%20npm)-6366f1?style=for-the-badge)](file:///home/benedek/SÍapp/index.html)
 
 ---
@@ -96,11 +96,11 @@ When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Ka
     - **Mountain Sector**: Choose from all 8 resort nodes from Summit to Base.
     - **Avatar**: Interactive emoji selection (🎿 Skier, 🏂 Boarder, ⛷️ Telemark, ⛑️ Medic, 🏔️ Scout, ⚡ Speed, 🦅 Eagle, 🛷 Sled).
     - **Radar Color**: Tactical palette (Neon Cyan, Radar Green, Amber Orange, Electric Purple, Rescue Red, Alpine Gold).
-  - **Dual Action Modes**:
-    - `[➕ Add to Squad]`: Adds the skier as an active teammate stationed on Mount Apex without changing your active operator.
-    - `[🔑 Create & Log In]`: Registers the profile and immediately logs in as that skier.
-  - **Profile Deletion**: Easily remove custom squad members with the dedicated trash action.
-  - **`localStorage` Persistence**: All created profiles and active login state persist reliably across browser reloads.
+  - **Unified Action**:
+    - `[PROFIL LÉTREHOZÁSA]`: Egyetlen tiszta gomb a profil regisztrálásához.
+    - `[Azonnali bejelentkezés ezzel a profillal]`: Opcionális checkbox az azonnali belépéshez.
+  - **Profile Deletion**: Könnyedén törölhetők az egyéni csapattagok a szemetes ikonnal.
+  - **`localStorage` Persistence**: Minden létrehozott profil és bejelentkezési állapot perzisztens a böngésző újratöltésekor.
 - **100% Universal Feature Compatibility**:
   - **Every created profile** receives dynamic SVG radar markers, pulse rings, and name tags.
   - **Voice Location**: *"Where is [Profile]?"* / *"Hol van [Profile]?"* immediately highlights them, pulses their radar dot, flashes their sector, and shows their telemetry card.
@@ -169,6 +169,14 @@ SÍapp/
     ├── main.js                # App entry point, bootstrap, event listeners & wiring
     ├── data/
     │   ├── resort-graph.js    # Mountain nodes (huts, peaks, lifts) & trail edges
+    │   ├── resort-loader.js   # Real-world ski resort search, image Vision AI & offline CV
+    │   ├── resorts-db.js      # Unified database registry re-exporting modular resorts
+    │   ├── resorts/           # 16+ dedicated real-world Alpine & Carpathian ski resorts
+    │   │   ├── murau.js       # Murau — Kreischberg (Rosenkranzhöhe, Kreischbergsee, WM-Arena)
+    │   │   ├── epleny.js      # Síaréna Vibe Park Eplény (Ámos-hegy, 4-üléses)
+    │   │   ├── kekesteto.js   # Kékestető Déli & Északi Sípálya
+    │   │   ├── jasna.js       # Jasná — Chopok Nízke Tatry
+    │   │   └── ...            # Schladming, Hintertux, Zermatt, Kitzbühel, Cortina, stb.
     │   ├── accounts.js        # Skier profiles, squad state, localStorage persistence
     │   ├── fuzzy-matcher.js   # Levenshtein distance, Hungarian phonetics & declensions
     │   ├── telemetry.js       # Real-time weather, snow conditions & hazard reports
@@ -188,7 +196,8 @@ SÍapp/
         ├── map-renderer.js    # SVG map rendering, ski runs & GPS radar blips
         ├── tactical-hud.js    # Turn-by-turn nav cards, telemetry & SOS emergency beacon
         ├── radio-feed.js      # Tactical radio log, channel filters & audio replay
-        └── profile-manager.js # Skier profile creation, switching modal & color selection
+        ├── profile-manager.js # Skier profile creation, switching modal & color selection
+        └── resort-modal.js    # Real-world ski resort catalog, search & image AI importer
 ```
 
 ---

@@ -2,8 +2,34 @@
    map-renderer.js — SVG Alpine Resort Map & GPS Radar Rendering
    ═══════════════════════════════════════════════════════════════════ */
 
-import { nodes, edges, simState } from '../data/resort-graph.js';
+import { nodes, edges, simState, activeResortMeta } from '../data/resort-graph.js';
 import { squad } from '../data/accounts.js';
+
+export function renderMountainBackdrop() {
+  const poly = document.getElementById('mountainSilhouette');
+  const altGroup = document.getElementById('altitudeLabelsGroup');
+
+  if (poly) {
+    const isDualPeak = activeResortMeta.id === 'murau' || (Boolean(nodes.peakWest) && Boolean(nodes.peakEast));
+    if (isDualPeak) {
+      // Distinctive dual peak silhouette (e.g. Rosenkranzhöhe on left, Kreischberg on right)
+      poly.setAttribute('points', '0,680 40,480 120,280 220,55 330,120 440,160 540,120 640,75 750,180 840,320 900,480 900,680');
+    } else {
+      poly.setAttribute('points', '0,680 50,500 150,380 250,200 350,120 450,60 550,90 620,180 700,250 780,340 850,420 900,500 900,680');
+    }
+  }
+
+  if (altGroup && activeResortMeta.altitude && activeResortMeta.baseAltitude) {
+    const peak = activeResortMeta.altitude;
+    const base = activeResortMeta.baseAltitude;
+    const step = (peak - base) / 5;
+    const labels = altGroup.querySelectorAll('text');
+    labels.forEach((lbl, i) => {
+      const alt = Math.round(peak - i * step);
+      lbl.textContent = `${alt}m`;
+    });
+  }
+}
 
 export function renderEdges(edgesGroup) {
   if (!edgesGroup) return;
@@ -56,29 +82,33 @@ export function renderEdges(edgesGroup) {
 export function renderNodes(nodesGroup, onNodeClick) {
   if (!nodesGroup) return;
   nodesGroup.innerHTML = '';
+  renderMountainBackdrop();
 
   for (const [id, node] of Object.entries(nodes)) {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'node-group cursor-pointer');
     g.dataset.nodeId = id;
 
+    const isLake = node.icon === '💧' || node.id.includes('see') || node.id.includes('lake');
+
     // Outer glow ring
     const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     ring.setAttribute('cx', node.x);
     ring.setAttribute('cy', node.y);
-    ring.setAttribute('r', '16');
-    ring.setAttribute('fill', 'none');
-    ring.setAttribute('stroke', '#00e5ff');
+    ring.setAttribute('r', isLake ? '20' : '16');
+    ring.setAttribute('fill', isLake ? '#38bdf8' : 'none');
+    ring.setAttribute('fill-opacity', isLake ? '0.15' : '0');
+    ring.setAttribute('stroke', isLake ? '#38bdf8' : '#00e5ff');
     ring.setAttribute('stroke-width', '1');
-    ring.setAttribute('stroke-opacity', '0.2');
+    ring.setAttribute('stroke-opacity', isLake ? '0.6' : '0.2');
 
     // Main circle
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', node.x);
     circle.setAttribute('cy', node.y);
-    circle.setAttribute('r', '10');
-    circle.setAttribute('fill', '#1a2236');
-    circle.setAttribute('stroke', '#00e5ff');
+    circle.setAttribute('r', isLake ? '12' : '10');
+    circle.setAttribute('fill', isLake ? '#07273d' : '#1a2236');
+    circle.setAttribute('stroke', isLake ? '#38bdf8' : '#00e5ff');
     circle.setAttribute('stroke-width', '2');
     circle.setAttribute('class', 'node-circle');
     circle.setAttribute('filter', 'url(#nodeShadow)');
@@ -93,12 +123,14 @@ export function renderNodes(nodesGroup, onNodeClick) {
     icon.textContent = node.icon;
 
     // Name label
+    const isRightAligned = node.x > 680;
     const nameLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    const labelX = node.x + 16;
+    const labelX = isRightAligned ? node.x - 16 : node.x + 16;
     const labelY = node.y - 6;
     nameLabel.setAttribute('x', labelX);
     nameLabel.setAttribute('y', labelY);
     nameLabel.setAttribute('class', 'node-label');
+    if (isRightAligned) nameLabel.setAttribute('text-anchor', 'end');
     nameLabel.textContent = node.name;
 
     // Altitude label
@@ -106,6 +138,7 @@ export function renderNodes(nodesGroup, onNodeClick) {
     altLabel.setAttribute('x', labelX);
     altLabel.setAttribute('y', labelY + 14);
     altLabel.setAttribute('class', 'node-altitude');
+    if (isRightAligned) altLabel.setAttribute('text-anchor', 'end');
     altLabel.textContent = `${node.altitude}m`;
 
     g.appendChild(ring);

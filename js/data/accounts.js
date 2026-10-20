@@ -136,8 +136,8 @@ export function createProfile({ name, role, location, avatar, color, autoLogin =
     id = `${baseId}_${counter++}`;
   }
 
-  const sector = location || 'mainValleyBase';
-  const node = nodes[sector] || nodes.mainValleyBase;
+  const sector = location || Object.keys(nodes)[0] || 'mainValleyBase';
+  const node = nodes[sector] || Object.values(nodes)[0] || { id: sector, name: 'Mountain Base', altitude: 1000 };
   const newAcc = {
     id,
     name: rawName,
@@ -188,7 +188,7 @@ export function switchAccount(accId, customName, customSector, customRole, custo
     return createProfile({
       name: customName,
       role: customRole || 'Alpine Skier',
-      location: customSector || 'mainValleyBase',
+      location: customSector || Object.keys(nodes)[0] || 'mainValleyBase',
       avatar: customAvatar || '🎿',
       color: customColor || '#00e5ff',
       autoLogin: true,

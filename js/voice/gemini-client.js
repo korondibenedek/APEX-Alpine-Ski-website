@@ -133,37 +133,47 @@ export async function processWithGeminiAudio(base64Audio, mimeType, { onFunction
   const systemInstruction = buildSystemInstruction();
   const cleanMimeType = (mimeType || 'audio/webm').split(';')[0];
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${_geminiApiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents: [
-          {
-            role: 'user',
-            parts: [
+  const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  let response = null;
+
+  for (const model of candidateModels) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${_geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents: [
               {
-                inlineData: {
-                  mimeType: cleanMimeType,
-                  data: base64Audio,
-                },
-              },
-              {
-                text: 'Listen to the skier helmet audio transmission. First transcribe what the skier said in the original language. Then execute the appropriate function call.',
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: cleanMimeType,
+                      data: base64Audio,
+                    },
+                  },
+                  {
+                    text: 'Listen to the skier helmet audio transmission. First transcribe what the skier said in the original language. Then execute the appropriate function call.',
+                  },
+                ],
               },
             ],
-          },
-        ],
-        tools: GEMINI_TOOLS,
-      }),
-    }
-  );
+            tools: GEMINI_TOOLS,
+          }),
+        }
+      );
+      if (res.ok) {
+        response = res;
+        break;
+      }
+    } catch (e) {}
+  }
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini Multimodal Audio error (${response.status}): ${errText}`);
+  if (!response || !response.ok) {
+    return false;
   }
 
   const data = await response.json();
@@ -223,22 +233,33 @@ export async function processWithGemini(text, { onFunctionCall, onAIResponse }) 
 
   const systemInstruction = buildSystemInstruction();
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${_geminiApiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: 'user', parts: [{ text }] }],
-        tools: GEMINI_TOOLS,
-      }),
-    }
-  );
+  const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  let data = null;
 
-  if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+  for (const model of candidateModels) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${_geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ role: 'user', parts: [{ text }] }],
+            tools: GEMINI_TOOLS,
+          }),
+        }
+      );
 
-  const data = await response.json();
+      if (response.ok) {
+        data = await response.json();
+        break;
+      }
+    } catch (e) {}
+  }
+
+  if (!data) throw new Error('Gemini API request failed across candidate models.');
+
   const candidate = data.candidates?.[0];
   if (!candidate) throw new Error('No candidates returned');
 

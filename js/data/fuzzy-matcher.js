@@ -2,7 +2,7 @@
    fuzzy-matcher.js — Phonetic & Fuzzy Name & Location Matching
    ═══════════════════════════════════════════════════════════════════ */
 
-import { nodes, edges } from './resort-graph.js';
+import { nodes, edges, activeResortMeta } from './resort-graph.js';
 import { getAccounts, getActiveAccount, getCurrentAccountId, squad } from './accounts.js';
 
 export function normalizeText(str) {
@@ -157,87 +157,54 @@ export function matchBestPerson(inputText, minThreshold = 0.65) {
 // Node & Target Location Resolution
 export function resolveNodeName(text) {
   if (!text) return null;
-  const lower = text.toLowerCase().trim();
+  const rawLower = text.toLowerCase().trim();
+  const normQuery = normalizeText(rawLower);
+  if (!normQuery) return null;
 
-  // 1. Station name keyword mappings (sorted by length descending for exact matches)
-  const mappings = {
-    'fővölgyi bázisállomás': 'mainValleyBase',
-    'eagle középállomás': 'eagleMid',
-    'avalanche chute': 'avalancheChute',
-    'eagle mid-station': 'eagleMid',
-    'eagle mid station': 'eagleMid',
-    'main valley base': 'mainValleyBase',
-    'south bowl lift': 'southBowlLift',
-    'lavina-hasadék': 'avalancheChute',
-    'glacier peak': 'glacierPeak',
-    'panorama hut': 'panoramaHut',
-    'panoráma hütte': 'panoramaHut',
-    'bázisállomás': 'mainValleyBase',
-    'középállomás': 'eagleMid',
-    'gleccsercsúcs': 'glacierPeak',
-    'gerincugrató': 'ridgeDrop',
-    'déli katlan': 'southBowlLift',
-    'fenyves erdő': 'pineForest',
-    'ridge drop': 'ridgeDrop',
-    'pine forest': 'pineForest',
-    'mid station': 'eagleMid',
-    'mid-station': 'eagleMid',
-    'midstation': 'eagleMid',
-    'valley base': 'mainValleyBase',
-    'south bowl': 'southBowlLift',
-    'south lift': 'southBowlLift',
-    'bowl lift': 'southBowlLift',
-    'main valley': 'mainValleyBase',
-    'hütténél': 'panoramaHut',
-    'huttenel': 'panoramaHut',
-    'hüttéhez': 'panoramaHut',
-    'huttehez': 'panoramaHut',
-    'hüttében': 'panoramaHut',
-    'hüttebe': 'panoramaHut',
-    'avalanche': 'avalancheChute',
-    'panorama': 'panoramaHut',
-    'restaurant': 'panoramaHut',
-    'crossroads': 'pineForest',
-    'gleccser': 'glacierPeak',
-    'glacier': 'glacierPeak',
-    'lavina': 'avalancheChute',
-    'summit': 'glacierPeak',
-    'forest': 'pineForest',
-    'village': 'mainValleyBase',
-    'valley': 'mainValleyBase',
-    'bottom': 'mainValleyBase',
-    'chute': 'avalancheChute',
-    'eagle': 'eagleMid',
-    'ridge': 'ridgeDrop',
-    'trees': 'pineForest',
-    'lodge': 'mainValleyBase',
-    'south': 'southBowlLift',
-    'hütte': 'panoramaHut',
-    'hutte': 'panoramaHut',
-    'base': 'mainValleyBase',
-    'peak': 'glacierPeak',
-    'deck': 'panoramaHut',
-    'pine': 'pineForest',
-    'top': 'glacierPeak',
-    'hut': 'panoramaHut'
-  };
+  // 1. Direct ID match
+  if (nodes[rawLower]) return rawLower;
+  if (nodes[normQuery]) return normQuery;
 
-  // Check station names first (sorted longest to shortest; short tokens require word boundary)
-  for (const [key, val] of Object.entries(mappings)) {
-    if (key.length <= 4) {
-      if (new RegExp('\\b' + key + '\\b', 'i').test(lower)) return val;
-    } else {
-      if (lower.includes(key)) return val;
+  // 2. Direct name or distinctive word match against active resort nodes
+  const nodeEntries = Object.entries(nodes);
+  if (nodeEntries.length === 0) return null;
+
+  // Check exact name normalized first
+  for (const [id, node] of nodeEntries) {
+    const normName = normalizeText(node.name);
+    if (normName === normQuery) return id;
+  }
+
+  // Check if query contains full node name or vice-versa
+  for (const [id, node] of nodeEntries) {
+    const normName = normalizeText(node.name);
+    if (normName.length >= 3) {
+      if (normQuery.includes(normName) || normName.includes(normQuery)) {
+        return id;
+      }
     }
   }
 
-  // 2. Resolve squad members using fuzzy matching
+  // Tokenize node names and check distinctive token matches
+  // e.g. "amos", "holle", "siarena", "kekesteto", "veronika", "matrahaza", "chopok", etc.
+  const commonStopWords = new Set(['es', 'a', 'az', 'the', 'and', 'at', 'to', 'pont', 'station', 'allomas', 'start', 'indito', 'lift', 'hut', 'hutte']);
+  for (const [id, node] of nodeEntries) {
+    const tokens = normalizeText(node.name).split(/\s+/).filter(t => t.length >= 3 && !commonStopWords.has(t));
+    for (const tok of tokens) {
+      const tokenRegex = new RegExp('\\b' + tok + '\\b', 'i');
+      if (tokenRegex.test(normQuery) || (tok.length >= 5 && normQuery.includes(tok))) {
+        return id;
+      }
+    }
+  }
+
+  // 3. Resolve squad members using fuzzy matching
   const currentAccountId = getCurrentAccountId();
-  const personMatch = matchBestPerson(lower);
+  const personMatch = matchBestPerson(rawLower);
   if (personMatch) {
     const acc = personMatch.account;
     if (acc.id === currentAccountId) {
-      return squad.you?.currentNode || acc.location || 'glacierPeak';
+      return squad.you?.currentNode || acc.location || nodeEntries[0][0];
     }
     const member = squad[acc.id];
     if (member) {
@@ -247,16 +214,64 @@ export function resolveNodeName(text) {
         if (edge) return edge.to;
       }
     }
-    return acc.location || 'mainValleyBase';
+    return acc.location || nodeEntries[nodeEntries.length - 1][0];
   }
 
-  // 3. Generic station resolution ("a station", "nearest station", "the station")
-  if (/\b(a\s*station|the\s*station|next\s*station|nearest\s*station|station)\b/i.test(lower)) {
-    const cur = squad.you?.currentNode || 'glacierPeak';
-    if (cur === 'glacierPeak') return 'eagleMid';
-    if (cur === 'eagleMid') return 'panoramaHut';
-    if (cur === 'panoramaHut') return 'southBowlLift';
-    return 'mainValleyBase';
+  // 4. Mount Apex specific alias mappings (if active resort is Mount Apex)
+  if (!activeResortMeta.id || activeResortMeta.id === 'mountApex') {
+    const apexMappings = {
+      'fovolgyi bazisallomas': 'mainValleyBase',
+      'eagle kozepallomas': 'eagleMid',
+      'avalanche chute': 'avalancheChute',
+      'eagle mid station': 'eagleMid',
+      'main valley base': 'mainValleyBase',
+      'south bowl lift': 'southBowlLift',
+      'lavina hasadek': 'avalancheChute',
+      'glacier peak': 'glacierPeak',
+      'panorama hut': 'panoramaHut',
+      'gleccsercsucs': 'glacierPeak',
+      'gerincugrato': 'ridgeDrop',
+      'deli katlan': 'southBowlLift',
+      'fenyves erdo': 'pineForest',
+    };
+    for (const [k, v] of Object.entries(apexMappings)) {
+      if (normQuery.includes(k)) return v;
+    }
+  }
+
+  // 5. Generic terrain resolution across ANY mountain:
+  // Summit / Csúcs / Top / Peak
+  if (/\b(summit|peak|top|csucs|tetö|teto|gleccser|glacier)\b/i.test(normQuery)) {
+    let highestId = nodeEntries[0][0];
+    let maxAlt = -Infinity;
+    for (const [id, node] of nodeEntries) {
+      if (node.altitude > maxAlt) {
+        maxAlt = node.altitude;
+        highestId = id;
+      }
+    }
+    return highestId;
+  }
+
+  // Valley / Base / Alj / Völgy / Bottom
+  if (/\b(base|valley|bottom|volgy|bazis|alj|parkolo)\b/i.test(normQuery)) {
+    let lowestId = nodeEntries[0][0];
+    let minAlt = Infinity;
+    for (const [id, node] of nodeEntries) {
+      if (node.altitude < minAlt) {
+        minAlt = node.altitude;
+        lowestId = id;
+      }
+    }
+    return lowestId;
+  }
+
+  // Mid-Station / Hütte / Hut / Restaurant / Középállomás
+  if (/\b(mid|middle|kozep|hut|hutte|etterem|restaurant)\b/i.test(normQuery)) {
+    const hutNode = nodeEntries.find(([id, n]) => /hut|hütte|étterem|vendéglő|bár|bar/i.test(n.name));
+    if (hutNode) return hutNode[0];
+    const sorted = [...nodeEntries].sort((a, b) => a[1].altitude - b[1].altitude);
+    return sorted[Math.floor(sorted.length / 2)][0];
   }
 
   return null;
@@ -268,11 +283,12 @@ export function locateEntity(query) {
   const lower = query.toLowerCase().trim();
   const currentAccountId = getCurrentAccountId();
   const accounts = getAccounts();
+  const fallbackNode = Object.values(nodes)[0] || { id: 'unknown', name: 'Mountain Station', altitude: 2000 };
 
   // 1. Current User (You / Me / Where am I / Hol vagyok)
   if (/where am i|who am i|myself|my position|hol vagyok|hol allok/i.test(normalizeText(lower))) {
     const active = getActiveAccount();
-    const node = nodes[active.location] || nodes.glacierPeak;
+    const node = nodes[active.location] || fallbackNode;
     return {
       type: 'person',
       id: active.id,
@@ -293,10 +309,10 @@ export function locateEntity(query) {
     const active = getActiveAccount();
     const others = accounts.filter(a => a.id !== active.id);
     const squadDesc = others.map(a => {
-      const node = nodes[a.location] || nodes.mainValleyBase;
+      const node = nodes[a.location] || fallbackNode;
       return `${a.name} is at ${node.name} (${node.altitude}m)`;
     }).join(', ');
-    const yourNode = nodes[squad.you?.currentNode || active.location] || nodes.glacierPeak;
+    const yourNode = nodes[squad.you?.currentNode || active.location] || fallbackNode;
     return {
       type: 'squad',
       id: 'squad',
@@ -311,10 +327,10 @@ export function locateEntity(query) {
     const acc = personMatch.account;
     const isYou = acc.id === currentAccountId;
     const targetNodeId = isYou ? (squad.you?.currentNode || acc.location) : (squad[acc.id]?.currentNode || acc.location);
-    const node = nodes[targetNodeId] || nodes[acc.location] || nodes.mainValleyBase;
+    const node = nodes[targetNodeId] || nodes[acc.location] || fallbackNode;
     const isKajtiCarving = acc.id === 'kajti' && acc.onEdge;
     const alt = isKajtiCarving ? 2000 : node.altitude;
-    const locName = isKajtiCarving ? 'Red Run 4 (towards South Bowl)' : node.name;
+    const locName = isKajtiCarving ? 'Piste Route' : node.name;
     const statusText = acc.status || `Active at ${locName} (${alt}m)`;
     const desc = isYou
       ? `Your GPS position is confirmed at ${locName}, altitude ${alt} meters. Transceiver active, squad telemetry linked.`

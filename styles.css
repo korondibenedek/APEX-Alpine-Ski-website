@@ -382,17 +382,6 @@ body {
   100% { stroke-opacity: 1; }
 }
 
-/* ─── Node status indicator ─── */
-.node-status-ring {
-  fill: none;
-  stroke-width: 2;
-  animation: statusRingPulse 2s ease-in-out infinite;
-}
-@keyframes statusRingPulse {
-  0%, 100% { stroke-opacity: 0.3; r: 14; }
-  50%      { stroke-opacity: 0.8; r: 18; }
-}
-
 /* ─── HUD Navigation Tabs ─── */
 .hud-tab {
   background: transparent;

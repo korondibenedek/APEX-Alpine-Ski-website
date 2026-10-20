@@ -43,7 +43,7 @@ export function classifyIntent(text) {
   }
 
   // 4. Route planning (evaluated before general conditions so "route avoiding ice" routes)
-  if (/\b(route|navigate|take\s*me|go\s*to|get\s*to|how\s*(?:do\s*i|doi\s*i|can\s*i|to)\s*(?:get|reach|go|ski)|way\s*to|path\s*to|guide\s*me|direction|avoid|lead\s*me|head\s*to|ski\s*to|interception|útvonal|vigyél|menjünk)\b/i.test(lower)) {
+  if (/\b(route|navigate|take\s*me|go\s*to|get\s*to|how\s*(?:do\s*i|doi\s*i|can\s*i|to)\s*(?:get|reach|go|ski)|way\s*to|path\s*to|guide\s*me|direction|avoid|lead\s*me|head\s*to|ski\s*to|interception|tervezz|tervezzünk|útvonal|útvonalat|utvonal|utvonalat|menjünk|vigyél|navigálj|navigalj|vezess|hogyan\s*jutok)\b/i.test(lower)) {
     return 'planSkiRoute';
   }
 
@@ -106,9 +106,16 @@ export function extractRouteArgs(text) {
   if (fromMatch) {
     args.from = resolveNodeName(fromMatch[1].trim());
   }
+  // Hungarian: "X-ről", "X-ről Y-ra"
+  if (!args.from) {
+    const huFromMatch = lower.match(/(?:az?\s+)?([a-z0-9\s]+?)(?:rol|ről|ról|tol|től)\b/i);
+    if (huFromMatch) {
+      args.from = resolveNodeName(huFromMatch[1].trim());
+    }
+  }
   // Default from: current player location
   if (!args.from) {
-    args.from = squad.you?.currentNode || 'glacierPeak';
+    args.from = squad.you?.currentNode || Object.keys(nodes)[0];
   }
 
   // Detect person in route query using fuzzy matching
@@ -120,9 +127,17 @@ export function extractRouteArgs(text) {
 
   // Detect explicit destination with "to" or "reach"
   if (!args.to) {
-    const toMatch = lower.match(/(?:to|toward|towards|reach|get\s*to|lead\s*me\s*to|take\s*me\s*to|ski\s*to)\s+([a-z\s]+?)(?:\.|,|$|\band\b|\bavoiding\b)/i);
+    const toMatch = lower.match(/(?:to|toward|towards|reach|get\s*to|lead\s*me\s*to|take\s*me\s*to|ski\s*to|felé|irányába|odáig)\s+([a-z\s]+?)(?:\.|,|$|\band\b|\bavoiding\b)/i);
     if (toMatch) {
       args.to = resolveNodeName(toMatch[1].trim());
+    }
+  }
+
+  // Hungarian destination: "Y-ra", "Y-re", "Y-hoz", "Y-hez", "Y-ba", "Y-be"
+  if (!args.to) {
+    const huToMatch = lower.match(/(?:az?\s+)?([a-z0-9\s]+?)(?:ra|re|hoz|hez|höz|ba|be)\b/i);
+    if (huToMatch) {
+      args.to = resolveNodeName(huToMatch[1].trim());
     }
   }
 

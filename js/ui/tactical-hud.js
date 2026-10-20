@@ -6,7 +6,6 @@ import { nodes, simState } from '../data/resort-graph.js';
 import { matchBestPerson } from '../data/fuzzy-matcher.js';
 
 let _isSOSActive = false;
-let _lastSOSTime = 0;
 
 export function getIsSOSActive() {
   return _isSOSActive;
@@ -144,7 +143,6 @@ export function showSOSCard(sosCard, sosCardBody, location, injury, onDismiss) {
   if (!sosCard || !sosCardBody) return;
 
   _isSOSActive = true;
-  _lastSOSTime = Date.now();
   const node = nodes[location];
   const locName = node ? node.name : location;
 

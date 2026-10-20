@@ -6,9 +6,6 @@ import { nodes } from '../data/resort-graph.js';
 import {
   getAccounts,
   getActiveAccount,
-  createProfile,
-  deleteProfile,
-  switchAccount,
 } from '../data/accounts.js';
 
 let _selectedColor = '#00e5ff';
@@ -69,7 +66,7 @@ export function renderAccountsModalList(accountsListContainer, { onSwitch, onDel
           <div>
             <div class="flex items-center gap-2">
               <span class="font-bold text-sm text-white">${acc.name}</span>
-              ${isActive ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-hud-cyan/20 text-hud-cyan border border-hud-cyan/40">ACTIVE (YOU)</span>' : ''}
+              ${isActive ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-hud-cyan/20 text-hud-cyan border border-hud-cyan/40">AKTÍV (TE)</span>' : ''}
             </div>
             <div class="text-[11px] text-hud-text/60 font-mono">${acc.role} · @ ${nodeName}</div>
           </div>
@@ -78,12 +75,12 @@ export function renderAccountsModalList(accountsListContainer, { onSwitch, onDel
         <div class="flex items-center gap-2">
           ${
             !isActive
-              ? `<button class="btn-select-account px-2.5 py-1 text-xs rounded border border-hud-border hover:border-hud-cyan hover:text-hud-cyan bg-hud-bg/60 transition font-mono cursor-pointer" data-acc-id="${acc.id}">Switch</button>`
+              ? `<button class="btn-select-account px-2.5 py-1 text-xs rounded border border-hud-border hover:border-hud-cyan hover:text-hud-cyan bg-hud-bg/60 transition font-mono cursor-pointer" data-acc-id="${acc.id}">Váltás</button>`
               : ''
           }
           ${
             accounts.length > 1
-              ? `<button class="btn-delete-account p-1 text-hud-text/40 hover:text-red-400 transition" title="Delete Profile" data-acc-id="${acc.id}">
+              ? `<button class="btn-delete-account p-1 text-hud-text/40 hover:text-red-400 transition" title="Profil törlése" data-acc-id="${acc.id}">
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>`
               : ''
