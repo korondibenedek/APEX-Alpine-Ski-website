@@ -1,0 +1,110 @@
+<!-- ══════════════════════════════════════════════════════════════
+         LEFT PANEL — Alpine Sector Map & Live Simulator (60%)
+         ══════════════════════════════════════════════════════════════ -->
+    <section id="mapPanel" class="w-[60%] h-full flex flex-col border-r border-hud-border relative overflow-hidden">
+
+      <!-- Simulator Controls -->
+      <div class="flex items-center gap-2 px-4 py-2 bg-hud-panel/60 border-b border-hud-border flex-shrink-0">
+        <span class="text-[10px] uppercase tracking-widest text-hud-text/40 mr-2 flex items-center gap-1"><i data-lucide="sliders-horizontal" class="w-3 h-3"></i> Simulator</span>
+        <button data-sim="blizzard" class="sim-btn">
+          <i data-lucide="cloud-snow" class="w-3.5 h-3.5"></i>
+          <span>Blizzard at Peak</span>
+        </button>
+        <button data-sim="liftClosed" class="sim-btn">
+          <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+          <span>Close South Lift</span>
+        </button>
+        <button data-sim="iceBlack" class="sim-btn">
+          <i data-lucide="snowflake" class="w-3.5 h-3.5"></i>
+          <span>Ice on Black Runs</span>
+        </button>
+      </div>
+
+      <!-- SVG Map Container -->
+      <div id="mapContainer" class="flex-1 relative overflow-hidden">
+        <!-- Mountain background gradient -->
+        <div class="absolute inset-0 mountain-bg pointer-events-none"></div>
+        <svg id="skiMap" viewBox="0 0 900 680" class="w-full h-full" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <!-- Glow filters -->
+            <filter id="glowCyan" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feFlood flood-color="#39ff14" flood-opacity="0.4" result="glow"/>
+              <feComposite in="glow" in2="blur" operator="in" result="glowIn"/>
+              <feMerge><feMergeNode in="glowIn"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+            </filter>
+            <!-- Route highlight gradient -->
+            <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e5ff"/>
+              <stop offset="100%" stop-color="#39ff14"/>
+            </linearGradient>
+            <!-- Marker for lift lines -->
+            <marker id="liftArrow" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="4" markerHeight="4">
+              <circle cx="3" cy="3" r="2.5" fill="#888"/>
+            </marker>
+          </defs>
+
+          <!-- Mountain silhouette background -->
+          <polygon id="mountainSilhouette" points="0,680 50,500 150,380 250,200 350,120 450,60 550,90 620,180 700,250 780,340 850,420 900,500 900,680"
+                   fill="url(#mountainFill)" opacity="0.15"/>
+          <linearGradient id="mountainFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1e3a5f"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </linearGradient>
+
+          <!-- Grid lines (subtle) -->
+          <g class="grid-lines" stroke="#1e3a5f" stroke-width="0.5" opacity="0.3">
+            <line x1="0" y1="100" x2="900" y2="100"/>
+            <line x1="0" y1="200" x2="900" y2="200"/>
+            <line x1="0" y1="300" x2="900" y2="300"/>
+            <line x1="0" y1="400" x2="900" y2="400"/>
+            <line x1="0" y1="500" x2="900" y2="500"/>
+            <line x1="0" y1="600" x2="900" y2="600"/>
+          </g>
+
+          <!-- Altitude labels -->
+          <g id="altitudeLabelsGroup" class="altitude-labels" fill="#1e3a5f" font-size="10" font-family="JetBrains Mono, monospace">
+            <text x="870" y="95">3200m</text>
+            <text x="870" y="195">2800m</text>
+            <text x="870" y="295">2400m</text>
+            <text x="870" y="395">2000m</text>
+            <text x="870" y="495">1600m</text>
+            <text x="870" y="595">1200m</text>
+          </g>
+
+          <!-- ═══ SKI RUNS & LIFTS (edges) ═══ -->
+          <g id="edgesGroup"></g>
+
+          <!-- ═══ ROUTE HIGHLIGHT LAYER ═══ -->
+          <g id="routeHighlight"></g>
+
+          <!-- ═══ NODES (stations) ═══ -->
+          <g id="nodesGroup"></g>
+
+          <!-- ═══ SQUAD MEMBER DOTS ═══ -->
+          <g id="squadGroup"></g>
+        </svg>
+
+        <!-- Map legend -->
+        <div class="absolute bottom-3 left-3 bg-hud-bg/80 backdrop-blur border border-hud-border rounded-lg px-3 py-2 text-[10px] font-mono flex gap-4">
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-blue-400 inline-block rounded"></span> Kék / Könnyű</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-red-500 inline-block rounded"></span> Piros / Közepes</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-gray-100 inline-block rounded"></span> Fekete / Nehéz</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-0.5 border-t border-dashed border-yellow-400 inline-block"></span> Felvonó / Lift</span>
+        </div>
+
+        <!-- Blizzard overlay -->
+        <div id="blizzardOverlay" class="hidden absolute inset-0 pointer-events-none blizzard-overlay"></div>
+      </div>
+    </section>

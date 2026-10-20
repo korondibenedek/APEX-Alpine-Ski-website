@@ -2,8 +2,8 @@
    gemini-client.js — Gemini 2.0 Flash Multimodal Audio & Tool-Calling
    ═══════════════════════════════════════════════════════════════════ */
 
-import { nodes, simState } from '../data/resort-graph.js';
-import { squad, getActiveAccount } from '../data/accounts.js';
+import { nodes, simState, activeResortMeta } from '../data/resort-graph.js';
+import { squad, getActiveAccount, getAccounts } from '../data/accounts.js';
 import { resolveNodeName } from '../data/fuzzy-matcher.js';
 import { aiSpeak } from './speech-tts.js';
 
@@ -54,7 +54,7 @@ export const GEMINI_TOOLS = [{
     },
     {
       name: 'pingSquad',
-      description: 'Send a tactical radio message or transmission to squad members (Renato, Kajti, Ski Patrol, or All Squad). Use this whenever the user wants to send a message, radio someone, or alert teammates/ski patrol about anything (including blizzards, weather, hazards, or meetups).',
+      description: 'Send a tactical radio message or transmission to a registered squad member or the whole squad. Use this whenever the user wants to send a message, radio someone, or alert teammates about anything (including blizzards, weather, hazards, or meetups).',
       parameters: {
         type: 'object',
         properties: {
@@ -67,7 +67,7 @@ export const GEMINI_TOOLS = [{
     },
     {
       name: 'locateEntity',
-      description: 'Locate a teammate, skier, squad overview, or mountain station/hut on the radar map (e.g., Renato, Kajti, Benedek, Ski Patrol, Panorama Hut, or "where is everyone").',
+      description: 'Locate a registered teammate, skier, squad overview, or mountain station on the radar map.',
       parameters: {
         type: 'object',
         properties: {
@@ -92,7 +92,7 @@ export const GEMINI_TOOLS = [{
       parameters: {
         type: 'object',
         properties: {
-          location: { type: 'string', description: 'Location of the emergency on Mount Apex' },
+          location: { type: 'string', description: 'Location of the emergency on the active resort' },
           injury: { type: 'string', description: 'Description of injury or emergency situation' },
         },
         required: ['location'],
@@ -110,19 +110,26 @@ export const GEMINI_TOOLS = [{
 }];
 
 function buildSystemInstruction() {
-  const activeUser = getActiveAccount() || squad.you || { name: 'Benedek', location: 'glacierPeak' };
-  const currentLocNode = nodes[activeUser.location]?.name || 'Glacier Peak';
+  const activeUser = getActiveAccount() || squad.you || { name: 'Operator', location: Object.keys(nodes)[0] };
+  const currentLocNode = nodes[activeUser.location]?.name || 'the mountain';
+  const locations = Object.values(nodes)
+    .map(node => `${node.name}${node.altitude ? ` (${node.altitude}m)` : ''}`)
+    .join(', ');
+  const teammates = getAccounts()
+    .filter(account => account.isCustom && account.id !== activeUser.id)
+    .map(account => `${account.name} (${account.role || 'Skier'}) at ${nodes[account.location]?.name || 'the mountain'}`)
+    .join('; ') || 'No other squad members are currently registered.';
 
-  return `You are APEX, a tactical hands-free AI visor wingman for alpine skiing and snowboard exploration on Mount Apex (3,200m).
+  return `You are APEX, a tactical hands-free AI visor wingman for alpine skiing and snowboard exploration at ${activeResortMeta.name} (${activeResortMeta.altitude}m).
 Current Operator: ${activeUser.name} (${activeUser.role || 'Skier'}) stationed at ${currentLocNode}.
-Mount Apex key locations: Glacier Peak (summit 3200m), Ridge Drop (2950m), Avalanche Chute (2600m), Eagle Mid-Station (2400m), Panorama Hut (2200m), Pine Forest Crossroads (1950m), South Bowl Lift (1800m), Main Valley Base (1500m).
-Squad members: Renato (Panorama Hut), Kajti (Red Run 4 / South Bowl), Ski Patrol (Eagle Mid-Station), and registered teammates.
+Available locations: ${locations || 'No locations are currently available'}.
+Registered teammates: ${teammates}
 Current weather: ${simState.blizzard ? 'BLIZZARD active at summit' : 'Clear'}, ${simState.liftClosed ? 'South Express Lift CLOSED due to high wind' : 'All lifts operational'}, ${simState.iceBlack ? 'ICE alert on black runs' : 'Groomed packed powder'}.
 
 Guidelines:
 1. When receiving direct user audio or text, transcribe the user's speech verbatim in the original spoken language (Hungarian or English).
-2. If the user wants to send a message, radio someone, or alert teammates/ski patrol (e.g. "send a message to ski patrol that a blizzard has started", "tell Kajti watch out for ice", "küldj rádióüzenetet"), ALWAYS call pingSquad. Do NOT call checkConditions when the user is dispatching a message.
-3. The user may speak Hungarian (e.g. "Hol van Renátó?", "Küldj rádióüzenetet a csapatnak hogy találkozzunk a hütténél", "Navigálj a Panoráma hüttéhez elkerülve a fekete pályákat", "Segítség, elestem a lavina hasadéknál"). Understand Hungarian phonetics, names, and declensions (Renátónak, Kajtihoz, hüttéhez, stb.) and trigger the exact tactical function call.
+2. If the user wants to send a message, radio someone, or alert teammates, ALWAYS call pingSquad. Do NOT call checkConditions when the user is dispatching a message.
+3. The user may speak Hungarian. Understand Hungarian phonetics and declensions for names and locations, and trigger the exact tactical function call.
 4. Be concise, tactical, and use an authentic alpine-wingman radio tone. Always prefer executing the matching function call.`;
 }
 

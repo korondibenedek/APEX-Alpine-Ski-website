@@ -51,26 +51,6 @@ export function similarity(s1, s2) {
   return Math.max(0, 1 - dist / maxL);
 }
 
-// Pre-configured phonetic aliases for alpine crew to bridge English ASR on Hungarian/European names
-export const KNOWN_PERSON_ALIASES = {
-  kajti: [
-    'kajti', 'kaity', 'kaiti', 'kitey', 'kyte', 'kite', 'katie', 'katee',
-    'kyti', 'cajti', 'caiti', 'kayti', 'kaitie', 'kity', 'kajty', 'kajto', 'keiti', 'kathy'
-  ],
-  renato: [
-    'renato', 'renata', 'renate', 'renado', 'renault', 'ranato', 'ronato',
-    'reynato', 'renatto', 'renat', 'renáto', 'renátó', 'reynaldo'
-  ],
-  benedek: [
-    'benedek', 'benedict', 'benedic', 'benedec', 'benedeck', 'benedik',
-    'benedick', 'bende', 'bennedek', 'benedet', 'benji', 'benci'
-  ],
-  patrol: [
-    'patrol', 'petrol', 'patrole', 'ski patrol', 'rescue', 'medic', 'doctor',
-    'hegyimento', 'hegyimentő', 'mentok', 'mentők', 'orvos', 'doktor', 'mentő'
-  ]
-};
-
 // Reserved command and preposition words that must never falsely match skier names
 export const RESERVED_WORDS = new Set([
   'send', 'radio', 'message', 'tell', 'ping', 'route', 'navigate', 'locate',
@@ -106,8 +86,7 @@ export function matchBestPerson(inputText, minThreshold = 0.65) {
       baseNorm,
       acc.id,
       ...nameParts,
-      ...(KNOWN_PERSON_ALIASES[acc.id] || []),
-      ...(KNOWN_PERSON_ALIASES[baseNorm] || []),
+      ...(acc.aliases || []),
     ]);
 
     // Add common Hungarian case suffixes for each name part
@@ -202,19 +181,7 @@ export function resolveNodeName(text) {
   const currentAccountId = getCurrentAccountId();
   const personMatch = matchBestPerson(rawLower);
   if (personMatch) {
-    const acc = personMatch.account;
-    if (acc.id === currentAccountId) {
-      return squad.you?.currentNode || acc.location || nodeEntries[0][0];
-    }
-    const member = squad[acc.id];
-    if (member) {
-      if (member.currentNode) return member.currentNode;
-      if (member.onEdge) {
-        const edge = edges.find(e => e.id === member.onEdge);
-        if (edge) return edge.to;
-      }
-    }
-    return acc.location || nodeEntries[nodeEntries.length - 1][0];
+    return resolvePersonNode(personMatch.account, currentAccountId, nodeEntries);
   }
 
   // 4. Mount Apex specific alias mappings (if active resort is Mount Apex)
@@ -277,6 +244,21 @@ export function resolveNodeName(text) {
   return null;
 }
 
+function resolvePersonNode(account, currentAccountId, nodeEntries = Object.entries(nodes)) {
+  const member = account.id === currentAccountId ? squad.you : squad[account.id];
+  if (member?.currentNode && nodes[member.currentNode]) return member.currentNode;
+
+  if (member?.onEdge) {
+    const edge = edges.find(candidate => candidate.id === member.onEdge);
+    if (edge && nodes[edge.from] && nodes[edge.to]) {
+      return (member.edgeProgress ?? 0.5) < 0.5 ? edge.from : edge.to;
+    }
+  }
+
+  if (account.location && nodes[account.location]) return account.location;
+  return nodeEntries[0]?.[0] || null;
+}
+
 // Locate Entity (Person or Station)
 export function locateEntity(query) {
   if (!query) query = '';
@@ -326,11 +308,10 @@ export function locateEntity(query) {
   if (personMatch) {
     const acc = personMatch.account;
     const isYou = acc.id === currentAccountId;
-    const targetNodeId = isYou ? (squad.you?.currentNode || acc.location) : (squad[acc.id]?.currentNode || acc.location);
+    const targetNodeId = resolvePersonNode(acc, currentAccountId);
     const node = nodes[targetNodeId] || nodes[acc.location] || fallbackNode;
-    const isKajtiCarving = acc.id === 'kajti' && acc.onEdge;
-    const alt = isKajtiCarving ? 2000 : node.altitude;
-    const locName = isKajtiCarving ? 'Piste Route' : node.name;
+    const alt = node.altitude;
+    const locName = node.name;
     const statusText = acc.status || `Active at ${locName} (${alt}m)`;
     const desc = isYou
       ? `Your GPS position is confirmed at ${locName}, altitude ${alt} meters. Transceiver active, squad telemetry linked.`
@@ -371,7 +352,6 @@ export function locateEntity(query) {
     type: 'unknown',
     id: 'unknown',
     name: 'Target Unknown',
-    description: `Rider or station not found on radar. You can ask for Kajti, Renato, Benedek, Ski Patrol, or any registered squad member or sector.`,
+    description: 'Rider or station not found on radar. Ask for a registered squad member or an active resort location.',
   };
 }
-

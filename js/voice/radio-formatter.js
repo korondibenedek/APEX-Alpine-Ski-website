@@ -103,18 +103,16 @@ export function extractSquadArgs(text) {
 
   if (!isBroadcast) {
     // Check known accounts for explicit mention
-    const accounts = getAccounts();
+    const accounts = getAccounts().filter(account => account.isCustom);
     for (const acc of accounts) {
-      const nameLower = acc.name.toLowerCase();
-      if (new RegExp('\\b' + nameLower + '\\b', 'i').test(lower)) {
+      const phrases = [acc.name, ...(acc.aliases || [])];
+      if (phrases.some(phrase => {
+        const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`\\b${escaped}\\b`, 'i').test(lower);
+      })) {
         if (!recipients.includes(acc.name)) recipients.push(acc.name);
       }
     }
-
-    // Check common squad aliases
-    if (/ren[aá]t[oó]/i.test(lower) && !recipients.includes('Renato')) recipients.push('Renato');
-    if (/kajti/i.test(lower) && !recipients.includes('Kajti')) recipients.push('Kajti');
-    if (/patrol|hegyiment|ment[oö]k/i.test(lower) && !recipients.includes('Ski Patrol')) recipients.push('Ski Patrol');
 
     // Fuzzy fallback if still empty: strip dispatch trigger words so "send", "radio", "message" do not trigger false matches
     if (recipients.length === 0) {
@@ -145,19 +143,21 @@ export function extractSquadArgs(text) {
   // 3. Extract pure message payload by stripping all leading dispatch trigger phrases
   let payload = rawInput;
 
-  // Strip English triggers: "send a radio message to Renato that...", "radio David...", "tell everyone..."
+  // Strip English dispatch triggers before extracting the message payload.
   payload = payload.replace(/^(?:please\s+)?(?:send\s+(?:a\s+)?(?:radio\s+)?message(?:\s+to)?|send\s+radio(?:\s+to)?|radio(?:\s+to)?|tell|ping(?:\s+squad)?|message|notify)\s*/i, '');
   // Strip Hungarian triggers: "küldj egy rádióüzenetet...", "mondd meg...", "szólj..."
   payload = payload.replace(/^(?:kérlek\s+)?(?:küldj\s+(?:egy\s+)?(?:rádió)?üzenetet|küldj\s+rádióüzenetet|rádiózz|mondd\s+meg|szólj|üzend\s+meg|üzenj)\s*/i, '');
 
   // Strip recipient name or squad from start of payload if present
-  const accounts = getAccounts();
+  const accounts = getAccounts().filter(account => account.isCustom);
   const allTargets = [
     'everyone', 'everybody', 'all squad', 'all units', 'all', 'the squad', 'squad',
     'mindenki', 'mindenkinek', 'csapat', 'csapatnak',
-    'ski patrol', 'patrol', 'hegyimentők', 'hegyimento',
-    'renato', 'renátó', 'kajti', 'benedek', 'bende',
-    ...accounts.flatMap(a => [a.name.toLowerCase(), normalizeText(a.name)])
+    ...accounts.flatMap(account => [
+      account.name.toLowerCase(),
+      normalizeText(account.name),
+      ...(account.aliases || []).map(normalizeText),
+    ])
   ];
   allTargets.sort((a, b) => b.length - a.length);
 
@@ -182,4 +182,3 @@ export function extractSquadArgs(text) {
     eta
   };
 }
-

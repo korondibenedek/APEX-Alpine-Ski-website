@@ -4,23 +4,25 @@
 
 import { playRadioSquelch } from './audio-fx.js';
 
-let _cachedEnglishVoice = null;
-let _activeSpeechResolve = null;
-let _isSpeaking = false;
-let _lastSpokenText = '';
-let _lastSpokenTime = 0;
+let cachedEnglishVoice = null;
+let activeSpeechResolve = null;
+let isSpeakingFlag = false;
+let lastSpokenText = '';
+let lastSpokenTime = 0;
+let onSpeakingChange = null;
 
-let _onSpeakingChange = null;
-export function setOnSpeakingChange(fn) { _onSpeakingChange = fn; }
+export function setOnSpeakingChange(fn) {
+  onSpeakingChange = fn;
+}
 
-// Pick highest quality English voice available in browser
 export function pickBestEnglishVoice() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
 
   const enVoices = voices.filter(v => /^en[-_]/i.test(v.lang));
-  if (enVoices.length === 0) return null;
+  if (!enVoices.length) return null;
 
   const preferred = [
     'Google US English',
@@ -41,25 +43,26 @@ export function pickBestEnglishVoice() {
   }
 
   return enVoices.find(v => v.lang === 'en-US')
-      || enVoices.find(v => v.lang === 'en-GB')
-      || enVoices[0];
+    || enVoices.find(v => v.lang === 'en-GB')
+    || enVoices[0];
 }
 
 export function initTTSVoices() {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    const tryCache = () => {
-      _cachedEnglishVoice = pickBestEnglishVoice();
-    };
-    tryCache();
-    window.speechSynthesis.onvoiceschanged = tryCache;
-  }
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+  const refreshVoice = () => {
+    cachedEnglishVoice = pickBestEnglishVoice();
+  };
+
+  refreshVoice();
+  window.speechSynthesis.onvoiceschanged = refreshVoice;
 }
 
-// Strip emoji & normalize accented chars so TTS maintains natural English prosody
-export function sanitizeForTTS(text) {
-  return (text || '')
+export function sanitizeForTTS(text = '') {
+  return String(text)
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -73,94 +76,102 @@ function speak(text) {
 
     window.speechSynthesis.cancel();
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang  = 'en-US';
-    utter.rate  = 1.05;
-    utter.pitch = 0.95;
-    utter.volume = 0.9;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    utterance.volume = 0.9;
 
-    if (!_cachedEnglishVoice) _cachedEnglishVoice = pickBestEnglishVoice();
-    if (_cachedEnglishVoice) utter.voice = _cachedEnglishVoice;
+    if (!cachedEnglishVoice) {
+      cachedEnglishVoice = pickBestEnglishVoice();
+    }
+    if (cachedEnglishVoice) {
+      utterance.voice = cachedEnglishVoice;
+    }
 
-    _activeSpeechResolve = resolve;
+    activeSpeechResolve = resolve;
 
     const finish = () => {
-      if (_activeSpeechResolve === resolve) {
-        _activeSpeechResolve = null;
+      if (activeSpeechResolve === resolve) {
+        activeSpeechResolve = null;
       }
       resolve();
     };
 
-    utter.onend = finish;
-    utter.onerror = finish;
+    utterance.onend = finish;
+    utterance.onerror = finish;
 
-    window.speechSynthesis.speak(utter);
+    window.speechSynthesis.speak(utterance);
   });
 }
 
-// Immediately cancel any AI speech playback and reset indicators
 export function cancelSpeech() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    try { window.speechSynthesis.cancel(); } catch (e) {}
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
   }
-  if (_activeSpeechResolve) {
-    const r = _activeSpeechResolve;
-    _activeSpeechResolve = null;
-    try { r(); } catch (e) {}
-  }
-  _isSpeaking = false;
-  _lastSpokenTime = Date.now();
 
-  const waveform = document.getElementById('waveform');
-  const speaker = document.getElementById('speakerIndicator');
+  if (activeSpeechResolve) {
+    const resolve = activeSpeechResolve;
+    activeSpeechResolve = null;
+    try {
+      resolve();
+    } catch {}
+  }
+
+  isSpeakingFlag = false;
+  lastSpokenTime = Date.now();
+
+  const waveform = typeof document !== 'undefined' ? document.getElementById('waveform') : null;
+  const speaker = typeof document !== 'undefined' ? document.getElementById('speakerIndicator') : null;
+
   waveform?.classList.remove('waveform-speaking');
-  if (speaker) speaker.classList.add('hidden');
+  speaker?.classList.add('hidden');
 
-  if (_onSpeakingChange) _onSpeakingChange(false);
+  onSpeakingChange?.(false);
 }
 
-// AI response speech with radio squelch and HUD animation
 export async function aiSpeak(text, pauseRecFn) {
-  const waveform = document.getElementById('waveform');
-  const speaker = document.getElementById('speakerIndicator');
+  const waveform = typeof document !== 'undefined' ? document.getElementById('waveform') : null;
+  const speaker = typeof document !== 'undefined' ? document.getElementById('speakerIndicator') : null;
 
   cancelSpeech();
 
-  _isSpeaking = true;
-  _lastSpokenText = text.toLowerCase();
-  _lastSpokenTime = Date.now();
+  isSpeakingFlag = true;
+  lastSpokenText = String(text).toLowerCase();
+  lastSpokenTime = Date.now();
 
-  if (typeof pauseRecFn === 'function') {
-    pauseRecFn();
-  }
-  if (_onSpeakingChange) _onSpeakingChange(true);
+  pauseRecFn?.();
+  onSpeakingChange?.(true);
 
   try {
     await playRadioSquelch();
-    if (!_isSpeaking) return;
+    if (!isSpeakingFlag) return;
 
     waveform?.classList.add('waveform-speaking');
-    if (speaker) speaker.classList.remove('hidden');
+    speaker?.classList.remove('hidden');
 
     await speak(sanitizeForTTS(text));
   } finally {
     waveform?.classList.remove('waveform-speaking');
-    if (speaker) speaker.classList.add('hidden');
-    _isSpeaking = false;
-    _lastSpokenTime = Date.now();
-    if (_onSpeakingChange) _onSpeakingChange(false);
+    speaker?.classList.add('hidden');
+
+    isSpeakingFlag = false;
+    lastSpokenTime = Date.now();
+    onSpeakingChange?.(false);
   }
 }
 
 export function isSpeaking() {
-  return _isSpeaking;
+  return isSpeakingFlag;
 }
 
 export function getLastSpokenText() {
-  return _lastSpokenText;
+  return lastSpokenText;
 }
 
 export function getLastSpokenTime() {
-  return _lastSpokenTime;
+  return lastSpokenTime;
 }
 

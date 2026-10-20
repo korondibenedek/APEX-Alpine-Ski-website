@@ -1,0 +1,332 @@
+<!-- ─── ACCOUNT / SKIER LOGIN MODAL ─── -->
+  <div id="accountModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-5 w-[490px] shadow-2xl relative max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between mb-2.5 border-b border-hud-border pb-2.5">
+        <div>
+          <h3 class="text-white font-bold flex items-center gap-2 text-sm tracking-wide">
+            <i data-lucide="users" class="w-4 h-4 text-hud-green"></i>
+            SÍELŐ PROFILOK ÉS CSAPATKEZELŐ
+          </h3>
+          <p class="text-[10px] font-mono text-hud-text/50">GPS JELADÓ &amp; CSAPAT RÁDIÓHÁLÓZAT</p>
+        </div>
+        <button id="btnCloseAccountModal" class="text-hud-text/40 hover:text-white transition p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-hud-text/70 mb-2.5 leading-relaxed">
+        Válts a csapattagok között vagy hozz létre új síelőt. A profilok valós időben megjelennek a radartérképen, követhetők, rádiózhatsz nekik és tervezhetsz hozzájuk útvonalat.
+      </p>
+
+      <!-- Account List -->
+      <div class="text-[10px] font-mono uppercase tracking-wider text-hud-text/40 mb-1 flex justify-between items-center">
+        <span id="squadAccountCount">Regisztrált Csapattagok</span>
+        <span class="text-hud-green flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-hud-green animate-pulse"></span> Aktív GPS Hálózat</span>
+      </div>
+      <div id="accountsListContainer" class="space-y-1.5 mb-3 max-h-44 overflow-y-auto scrollbar-thin pr-0.5">
+        <!-- Rendered dynamically via profile-manager.js -->
+      </div>
+
+      <!-- Custom Profile Creator Form -->
+      <div class="bg-hud-bg/85 border border-hud-border rounded-lg p-3 space-y-2.5">
+        <h4 class="text-[10px] font-mono uppercase tracking-wider text-hud-cyan font-bold flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+          Új Síelő Profil Hozzáadása
+        </h4>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Név / Hívójel</label>
+            <input id="customAccountName" type="text" placeholder="pl. Alex, Dávid, Zsófi..." class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono">
+          </div>
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Szerepkör / Stílus</label>
+            <input id="customAccountRole" type="text" placeholder="pl. Speed Rider, Freeride, Oktató..." class="w-full bg-hud-card border border-hud-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Kezdő Hegyi Állomás</label>
+            <select id="customAccountSector" class="w-full bg-hud-card border border-hud-border rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-hud-cyan font-mono">
+              <option value="glacierPeak">Glacier Peak (3200m)</option>
+              <option value="ridgeDrop">Ridge Drop (2950m)</option>
+              <option value="avalancheChute">Avalanche Chute (2600m)</option>
+              <option value="eagleMid">Eagle Mid-Station (2400m)</option>
+              <option value="panoramaHut">Panorama Hut (2200m)</option>
+              <option value="pineForest">Pine Forest (1950m)</option>
+              <option value="southBowlLift">South Bowl Lift (1800m)</option>
+              <option value="mainValleyBase">Main Valley Base (1500m)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-hud-text/60 block mb-1">Radar Pötty Színe</label>
+            <div id="customColorSelector" class="flex items-center gap-1.5 pt-1">
+              <button type="button" class="color-swatch-dot active" data-color="#00e5ff" style="background:#00e5ff; box-shadow:0 0 6px #00e5ff;" title="Neon Cyan"></button>
+              <button type="button" class="color-swatch-dot" data-color="#39ff14" style="background:#39ff14;" title="Radar Green"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ff9100" style="background:#ff9100;" title="Amber Orange"></button>
+              <button type="button" class="color-swatch-dot" data-color="#e040fb" style="background:#e040fb;" title="Electric Purple"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ff2d2d" style="background:#ff2d2d;" title="Rescue Red"></button>
+              <button type="button" class="color-swatch-dot" data-color="#ffd600" style="background:#ffd600;" title="Alpine Gold"></button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-hud-text/60 block mb-1">Ikon / Avatár</label>
+          <div id="customAvatarSelector" class="flex flex-wrap gap-1.5">
+            <button type="button" class="avatar-pill-btn active" data-avatar="🎿">🎿 Síelő</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🏂">🏂 Boarder</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⛷️">⛷️ Telemark</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⛑️">⛑️ Mentő</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🏔️">🏔️ Felderítő</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="⚡">⚡ Speed</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🦅">🦅 Sas</button>
+            <button type="button" class="avatar-pill-btn" data-avatar="🛷">🛷 Szánkó</button>
+          </div>
+        </div>
+
+        <!-- Single Action Button + Checkbox -->
+        <div class="pt-2 space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-mono text-hud-text/80 hover:text-white select-none">
+            <input id="chkAutoLoginCreated" type="checkbox" checked class="w-4 h-4 rounded border-hud-border text-hud-cyan focus:ring-0 bg-hud-card cursor-pointer" />
+            <span>Azonnali bejelentkezés ezzel a profillal</span>
+          </label>
+
+          <button id="btnCreateSkierProfile" type="button" class="w-full py-2.5 px-4 text-xs rounded-xl bg-hud-cyan/20 border border-hud-cyan text-hud-cyan hover:bg-hud-cyan hover:text-black font-mono font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-hud-cyan/15">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>PROFIL LÉTREHOZÁSA</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── RESORT SELECTOR & TERRAIN IMPORT MODAL ─── -->
+  <div id="resortModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-5 w-[620px] shadow-2xl relative max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between mb-2 border-b border-hud-border pb-2.5">
+        <div>
+          <h3 class="text-white font-bold flex items-center gap-2 text-sm tracking-wide">
+            <i data-lucide="map" class="w-4 h-4 text-hud-cyan"></i>
+            REAL-WORLD SKI RESORTS &amp; TERRAIN IMPORT
+          </h3>
+          <p class="text-[10px] font-mono text-hud-text/50">OFFLINE VECTOR TOPOLOGY · 15+ ALPINE &amp; CARPATHIAN MOUNTAINS</p>
+        </div>
+        <button id="btnCloseResortModal" class="text-hud-text/40 hover:text-white transition p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Navigation Tabs: Presets vs Image Vision AI -->
+      <div class="flex border-b border-hud-border mb-3 text-xs font-mono">
+        <button id="tabBtnResortList" type="button" class="flex-1 py-2 text-center border-b-2 border-hud-cyan text-hud-cyan font-bold flex items-center justify-center gap-1.5 cursor-pointer transition">
+          <i data-lucide="list" class="w-3.5 h-3.5"></i>
+          <span>🏔️ SÍTEREP LISTA</span>
+        </button>
+        <button id="tabBtnResortImage" type="button" class="flex-1 py-2 text-center border-b-2 border-transparent text-hud-text/60 hover:text-white font-medium flex items-center justify-center gap-1.5 cursor-pointer transition">
+          <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+          <span>📸 KÉP ALAPÚ GENERÁLÁS (AI VISION)</span>
+        </button>
+      </div>
+
+      <!-- ═════════ TAB 1: PRESET LIST & SEARCH ═════════ -->
+      <div id="tabContentResortList" class="flex flex-col flex-1 overflow-hidden">
+        <p class="text-xs text-hud-text/70 mb-2.5 leading-relaxed">
+          Válassz a valós síterep adatbázisból (Magyarország, Ausztria, Szlovákia, Franciaország, Svájc, Olaszország) vagy keress névre. <b>Nincs szükség API kulcsra</b> — a rendszer azonnal importálja a pályákat, lifteket és GPS radart!
+        </p>
+
+        <!-- Search & Input Box -->
+        <div class="relative mb-2">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-hud-text/40"></i>
+          <input id="resortSearchInput" type="text" placeholder="Keresés (pl. Murau, Eplény, Kékestető, Chopok, Les 2 Alpes, Kitzbühel, Zermatt)..." class="w-full bg-hud-bg/90 border border-hud-border rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-hud-text/40 focus:outline-none focus:border-hud-cyan font-mono" />
+        </div>
+
+        <!-- Country Filter Chips -->
+        <div id="resortCountryFilters" class="flex flex-wrap gap-1.5 mb-2.5 text-[10px] font-mono">
+          <button type="button" class="resort-filter-btn active px-2.5 py-1 rounded-md border border-hud-cyan bg-hud-cyan/20 text-hud-cyan font-bold" data-country="all">Összes (16+)</button>
+          <button type="button" class="resort-filter-btn px-2 py-1 rounded-md border border-hud-border bg-hud-card/60 text-hud-text/70 hover:text-white hover:border-hud-cyan/40" data-country="Magyarország">🇭🇺 Magyarország</button>
+          <button type="button" class="resort-filter-btn px-2 py-1 rounded-md border border-hud-border bg-hud-card/60 text-hud-text/70 hover:text-white hover:border-hud-cyan/40" data-country="Ausztria">🇦🇹 Ausztria</button>
+          <button type="button" class="resort-filter-btn px-2 py-1 rounded-md border border-hud-border bg-hud-card/60 text-hud-text/70 hover:text-white hover:border-hud-cyan/40" data-country="Szlovákia">🇸🇰 Szlovákia</button>
+          <button type="button" class="resort-filter-btn px-2 py-1 rounded-md border border-hud-border bg-hud-card/60 text-hud-text/70 hover:text-white hover:border-hud-cyan/40" data-country="Franciaország">🇫🇷 Franciaország</button>
+          <button type="button" class="resort-filter-btn px-2 py-1 rounded-md border border-hud-border bg-hud-card/60 text-hud-text/70 hover:text-white hover:border-hud-cyan/40" data-country="Svájc|Olaszország">🇨🇭 Svájc / 🇮🇹 Olaszország</button>
+        </div>
+
+        <!-- Status Banner (Hidden by default) -->
+        <div id="resortStatusMessage" class="hidden text-xs font-mono py-2 px-3 rounded-lg bg-hud-card border border-hud-cyan/40 text-hud-cyan mb-2"></div>
+
+        <!-- Instant Generate Action Button (Visible when typing custom query) -->
+        <button id="btnAiGenerateResort" type="button" class="hidden mb-2.5 w-full py-2 px-3 text-xs rounded-lg bg-hud-cyan/20 border border-hud-cyan/60 text-hud-cyan hover:bg-hud-cyan/30 font-mono font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-hud-cyan/10">
+          <i data-lucide="mountain" class="w-3.5 h-3.5 text-hud-cyan"></i>
+          <span>Azonnali Térképépítés &amp; Importálás: &quot;<span class="ai-target-resort font-bold text-white"></span>&quot; (100% Offline)</span>
+        </button>
+
+        <!-- Presets & Search Results Grid -->
+        <div class="text-[10px] font-mono uppercase tracking-wider text-hud-text/40 mb-1.5 flex justify-between items-center">
+          <span>Elérhető Síterepek</span>
+          <span class="text-hud-cyan font-mono text-[9px]">DIJKSTRA &amp; RADAR READY</span>
+        </div>
+        <div id="resortsListContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scrollbar-thin pr-1">
+          <!-- Rendered dynamically via resort-modal.js -->
+        </div>
+      </div>
+
+      <!-- ═════════ TAB 2: IMAGE VISION GENERATION ═════════ -->
+      <div id="tabContentResortImage" class="hidden flex-1 flex flex-col overflow-y-auto pr-1 space-y-3">
+        <p class="text-xs text-hud-text/70 leading-relaxed">
+          Tölts fel egy letöltött vagy lefotózott sítérképet (PNG / JPG). Az <b>AI képelemző</b> felismeri a hegycsúcsokat, állomásokat, felvonókat és pályákat, és közvetlenül felépíti a működő pályahálózatot!
+        </p>
+
+        <!-- Drop Zone & File Picker -->
+        <div id="imageDropZone" class="border-2 border-dashed border-hud-cyan/40 hover:border-hud-cyan bg-hud-bg/60 hover:bg-hud-cyan/5 rounded-xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 group">
+          <input type="file" id="resortImageFileInput" accept="image/png,image/jpeg,image/webp,image/jpg" class="hidden" />
+          <div id="dropZonePrompt" class="flex flex-col items-center gap-1.5 py-2">
+            <div class="w-10 h-10 rounded-full bg-hud-cyan/15 flex items-center justify-center text-hud-cyan group-hover:scale-110 transition">
+              <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xs font-bold text-white tracking-wide">Kattints ide vagy húzd ide a sítérkép képét</span>
+            <span class="text-[10px] font-mono text-hud-text/50">Támogatott formátumok: PNG, JPG, JPEG, WEBP</span>
+          </div>
+
+          <!-- Image Preview Area -->
+          <div id="imagePreviewContainer" class="hidden w-full space-y-2">
+            <div class="relative inline-block max-w-full">
+              <img id="imagePreviewThumb" src="" alt="Sítérkép előnézet" class="max-h-36 rounded-lg border border-hud-cyan/60 shadow-lg object-contain mx-auto bg-black/50" />
+              <button id="btnRemoveImage" type="button" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center hover:bg-red-500 shadow cursor-pointer text-xs font-bold" title="Kép eltávolítása">✕</button>
+            </div>
+            <div class="flex items-center justify-center gap-2 text-[10px] font-mono text-hud-text/60">
+              <span id="imageFileName" class="text-hud-cyan font-bold truncate max-w-xs"></span>
+              <span id="imageFileSize" class="text-hud-text/40"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional Name & Country Inputs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-mono uppercase text-hud-text/60 mb-1">Síterep Neve (opcionális)</label>
+            <input id="resortCustomNameInput" type="text" placeholder="pl. Murau — Kreischberg, Val d'Isère..." class="w-full bg-hud-bg/90 border border-hud-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-mono uppercase text-hud-text/60 mb-1">Ország / Régió (opcionális)</label>
+            <input id="resortCustomCountryInput" type="text" placeholder="pl. Ausztria · Stájerország..." class="w-full bg-hud-bg/90 border border-hud-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono" />
+          </div>
+        </div>
+
+        <!-- Analysis Mode Indicator -->
+        <div id="imageModeNotice" class="text-[10px] font-mono p-2 rounded-lg bg-hud-card border border-hud-border/70 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-hud-text/70">
+            <span class="w-2 h-2 rounded-full bg-hud-green animate-pulse"></span>
+            <span id="imageModeText">Készen áll az elemzésre</span>
+          </span>
+          <span id="imageKeyBadge" class="text-hud-cyan font-bold">MULTIMODAL AI &amp; OFFLINE READY</span>
+        </div>
+
+        <!-- Action Button -->
+        <button id="btnBuildFromImage" type="button" disabled class="w-full py-2.5 px-4 text-xs rounded-xl bg-hud-cyan/20 border border-hud-cyan text-hud-cyan font-mono font-bold hover:bg-hud-cyan hover:text-black transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-hud-cyan/15">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>SÍTEREP GENERÁLÁSA KÉPBŐL</span>
+        </button>
+
+        <!-- Progress / Error Banner -->
+        <div id="imageBuildProgress" class="hidden text-xs font-mono py-2 px-3 rounded-lg bg-hud-card border border-hud-cyan/50 text-hud-cyan flex items-center gap-2">
+          <div class="w-3.5 h-3.5 border-2 border-hud-cyan border-t-transparent rounded-full animate-spin"></div>
+          <span id="imageBuildStatusText">Kép elemzése és csúcsok felismerése...</span>
+        </div>
+
+        <!-- Active Generated Resort Quick Discard / Delete Banner -->
+        <div id="activeGeneratedResortBox" class="hidden p-3 rounded-xl border border-red-500/40 bg-red-500/10 flex items-center justify-between gap-3 mt-1">
+          <div class="flex items-center gap-2 min-w-0">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400 flex-shrink-0"></i>
+            <div class="min-w-0">
+              <p class="text-[10px] font-bold text-red-200 truncate">Aktív generált terep: <span id="activeGenName" class="text-white font-mono"></span></p>
+              <p class="text-[9px] text-hud-text/60 font-mono">Félrement a felismerés? Egy kattintással törölheted és visszatérhetsz az eredetihez.</p>
+            </div>
+          </div>
+          <button id="btnDeleteActiveGenerated" type="button" class="px-3 py-1.5 text-[10px] font-mono font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-1.5 shadow cursor-pointer whitespace-nowrap flex-shrink-0">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>TÖRLÉS &amp; RESET</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── AI VOICE & SPEECH ENGINE MODAL ─── -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+    <div class="bg-hud-card border border-hud-border rounded-xl p-5 w-[460px] shadow-2xl relative max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between mb-2.5 border-b border-hud-border/60 pb-2">
+        <h3 class="text-white font-bold text-sm flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-hud-cyan"></i>
+          AI Voice & Speech Recognition Settings
+        </h3>
+        <button id="btnCloseKeyModal" class="text-hud-text/40 hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-[11px] text-hud-text/60 mb-3">
+        Configure state-of-the-art free AI models for real-time alpine voice recognition and tool-calling.
+      </p>
+
+      <div class="space-y-3 flex-1 overflow-y-auto pr-0.5">
+        <!-- 1. Google Gemini 2.0 Flash (Multimodal Audio Input) -->
+        <div class="p-3 rounded-lg border border-hud-border/70 bg-hud-bg/50 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>✨</span>
+              <span>Gemini 2.0 Flash (Multimodal Audio)</span>
+            </span>
+            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-hud-cyan/20 text-hud-cyan border border-hud-cyan/40 font-bold">100% FREE TIER</span>
+          </div>
+          <p class="text-[10px] text-hud-text/60 leading-relaxed">
+            Transmits helmet microphone audio directly to Gemini. Understands Hungarian names, accents, and executes tactical tool-calling in one step.
+          </p>
+          <input id="geminiKeyInput" type="password" placeholder="AIzaSy... (Google AI Studio Key)" class="w-full bg-hud-bg border border-hud-border rounded px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-cyan font-mono" />
+          <div class="text-[9px] text-hud-cyan/80 font-mono">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="hover:underline inline-flex items-center gap-1">
+              <span>Get free key at aistudio.google.com</span>
+              <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- 2. Groq Whisper Large v3 Turbo -->
+        <div class="p-3 rounded-lg border border-hud-border/70 bg-hud-bg/50 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>Groq Whisper Large v3 Turbo</span>
+            </span>
+            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-hud-green/20 text-hud-green border border-hud-green/40 font-bold">150ms · FREE</span>
+          </div>
+          <p class="text-[10px] text-hud-text/60 leading-relaxed">
+            World-record ultra-fast speech-to-text powered by Groq LPUs. OpenAI's top Whisper model with flawless Hungarian and multi-language transcription.
+          </p>
+          <input id="groqKeyInput" type="password" placeholder="gsk_... (Groq Cloud API Key)" class="w-full bg-hud-bg border border-hud-border rounded px-2.5 py-1.5 text-xs text-white placeholder-hud-text/30 focus:outline-none focus:border-hud-green font-mono" />
+          <div class="text-[9px] text-hud-green/80 font-mono">
+            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" class="hover:underline inline-flex items-center gap-1">
+              <span>Get free key at console.groq.com</span>
+              <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- 3. Offline Web Speech Fallback -->
+        <div class="p-2.5 rounded-lg border border-hud-border/40 bg-hud-bg/30 text-[10px] text-hud-text/50 font-mono flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4 text-hud-text/40 flex-shrink-0"></i>
+          <span>If no API keys are entered, APEX automatically runs in offline mode using the browser Web Speech API & local intent router.</span>
+        </div>
+      </div>
+
+      <div class="flex gap-2 justify-end pt-3 border-t border-hud-border/60 mt-2">
+        <button id="btnCancelKey" class="px-3 py-1.5 text-xs rounded-lg border border-hud-border text-hud-text hover:bg-hud-border/30 transition">Cancel</button>
+        <button id="btnSaveKey" class="px-4 py-1.5 text-xs rounded-lg bg-hud-cyan text-hud-bg font-bold hover:brightness-110 transition flex items-center gap-1.5">
+          <i data-lucide="save" class="w-3.5 h-3.5"></i>
+          <span>Save Configuration</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MAIN CONTENT ─── -->

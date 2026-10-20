@@ -7,6 +7,8 @@
 
 ---
 
+---
+
 ## 1. Initial Challenge & Architecture Setup
 
 ### Objective
@@ -927,7 +929,105 @@ A rendszer három különálló, kényelmes helyen is lehetővé teszi a félrem
   - Véglegesen törölve: [`mountain-data.js`](file:///home/benedek/SÍapp/mountain-data.js), [`voice-engine.js`](file:///home/benedek/SÍapp/voice-engine.js), [`app.js`](file:///home/benedek/SÍapp/app.js) és `package-lock.json`.
   - A gyökérkönyvtár immár teljesen letisztult: csak az `index.html`, `styles.css`, `README.md`, `ai.md` és a strukturált `js/` mappa maradt.
 
+---
 
+## 33. Voice Module Cleanup & Reduction of Redundant Logic
 
+### Dátum
+**2026.10.20**
 
+### Módosítás
+A beszéd- és mikrofon modulok egyszerűsítése során a következő redundáns elemeket távolítottuk el:
 
+- `js/voice/speech-tts.js`
+  - eltávolítva a felesleges `_` előtagos belső változónevek
+  - megszüntetve a többszörös, ismétlődő DOM- és browser-guard logikát
+  - egyszerűsítve a `onSpeakingChange` és `pauseRecFn` hívásokat
+  - csökkentve a duplikált állapttörlést és a szükségtelen `try/catch` blokkokat
+
+- `js/voice/speech-rec.js`
+  - egyesítve a session és timeout state-eket
+  - megszüntetve a felesleges közbülső változókat és ismétlődő sorokat
+  - racionalizálva a `MediaRecorder`, `recognition` és waveform lifecycle kezelést
+  - megtartva a viselkedést, miközben a kód olvashatóbb és karbantarthatóbb lett
+
+### Eredmény
+- a modulok továbbra is ugyanazt a funkciót látják el
+- a logika átláthatóbb és rövidebb lett
+- a JavaScript syntax valid (`node --check` zöld)
+- a projektben nincsenek felesleges, semmit nem csináló kódrészletek
+
+---
+
+## 34. Ski Patrol/Kajti útvonaltervezés és radarpozíció javítása
+
+### Dátum
+**2026.10.20**
+
+### Probléma
+- A Ski Patrol és Kajti célpontjának feloldása elavult vagy érvénytelen pályaadat miatt meghiúsulhatott.
+- Kajti alapértelmezett `e9` pályája valójában nem a Red Run 4 volt, síterepváltás után pedig a korábbi terep pályaazonosítója a térképen kívüli radarpozíciót eredményezhetett.
+
+### Javítás
+- A személyek úticélja most csak az aktív terepen létező csomópontra oldódik fel; érvényes pályán haladó játékosnál a pozícióhoz közelebbi végpontot választja.
+- A terep betöltésekor törlődnek a régi pályaállapotok, az érvénytelen helyszínek pedig érvényes csomópontra kerülnek, majd frissül a squad állapota.
+- Kajti hibás alapértelmezett `e9` pályahivatkozása eltávolítva.
+- A térképrenderelő kihagyja a hiányzó vagy térképen kívüli pontokat, és korlátozza a pályán belüli marker-interpolációt.
+
+### Ellenőrzés
+- Az érintett JavaScript modulok `node --check` ellenőrzése sikeres.
+
+---
+
+## 35. HTML, CSS és alkalmazásmodulok szétválasztása
+
+### Dátum
+**2026.10.20**
+
+### Módosítás
+- Az `index.html` karcsú belépési pont lett; a fejléc, modálok, térkép és HUD külön `views/` résznézetekbe került.
+- A résznézeteket a `js/app/bootstrap.js` tölti be, és csak sikeres betöltés után indítja el az alkalmazást.
+- A `styles.css` megmaradt belépési pontnak, a tényleges stílusok nyolc, felelősségi kör szerint bontott `css/` fájlba kerültek.
+- A `main.js` most indítási feladatokat végez; a DOM-hivatkozások, térkép/HUD, események, útvonal, rádió, biztonsági állapotok, profilok és hangmotor külön `js/app/` modulokba kerültek.
+- A README projektstruktúrája frissítve.
+
+### Ellenőrzés
+- Minden alkalmazásmodul átment a `node --check` ellenőrzésen.
+- A HTML résznézetek összefűzése öt include-ot és 105 egyedi DOM-azonosítót tartalmazott.
+- A CSS komponensek összeillesztése megőrizte az eredeti szabályokat és sorrendet.
+- Böngészőben ellenőrizve: a főoldal betölt, a 14 térképcsomópont és 4 squad marker megjelenik, valamint működik a Radio fül és a profilmodal megnyitása.
+
+---
+
+## 36. Removing Seeded Profile-Specific Demo Content
+
+### Dátum
+**2026.10.20**
+
+### Módosítás
+- A régi beépített profilok helyett egy általános Operator-fallback marad; egy valódi profil első bejelentkezése eltávolítja ezt a helyőrzőt.
+- A rádiós címzettfelismerés, automatikus válaszok, Gemini/Groq promptok és demo chipek az aktuálisan regisztrált profilokból épülnek fel.
+- Profilváltás, létrehozás és törlés után a dinamikus demo chipek frissülnek; a delegált kattintáskezelő az új chipeket is működteti.
+- A README már csak dinamikus csapattag-példákat tartalmaz, és az SOS szöveg sem hivatkozik rögzített járőrszemélyre.
+
+### Ellenőrzés
+- A módosított JavaScript modulok `node --check` és a változtatások `git diff --check` ellenőrzése sikeres.
+- Böngészőben két tetszőleges tesztprofil alapján ellenőrizve: profilhoz kötött helymeghatározó és útvonaltervező promptok, valamint címzettnek küldött rádióüzenet és dinamikus válasz.
+- A régi profilinevekre végzett keresés nem talált találatot a runtime JavaScriptben, a nézetekben vagy a README-ben.
+
+---
+
+## 37. Respecting the Closed South Lift in Route Planning
+
+### Dátum
+**2026.10.20**
+
+### Módosítás
+- A déli felvonó explicit `liftClosed` szimulátor-kapcsolót kapott; az útvonaltervező már ezt az él-metaadatot használja az elavult `l2` azonosító helyett.
+- A térképen a megfelelő felvonó jelenik meg lezártként, és sikertelen újratervezéskor a korábbi útvonal kiemelése is törlődik.
+
+### Ellenőrzés
+- Ellenőrizve: nyitott felvonóval a Main Valley Base → Glacier Peak útvonal működik, lezárva nincs útvonal, majd újranyitás után ismét tervezhető.
+- Az érintett JavaScript modulok `node --check` és a patch `git diff --check` ellenőrzése sikeres.
+
+---

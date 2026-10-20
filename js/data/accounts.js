@@ -4,46 +4,16 @@
 
 import { nodes } from './resort-graph.js';
 
-export const DEFAULT_ACCOUNTS = [
-  {
-    id: 'benedek',
-    name: 'Benedek',
-    role: 'Team Lead / Alpine Skier',
-    color: '#39ff14',
-    location: 'glacierPeak',
-    status: 'At Summit (3,200m)',
-    avatar: '🎿',
-  },
-  {
-    id: 'renato',
-    name: 'Renato',
-    role: 'Alpine Scout / Radio Lead',
-    color: '#ff6f00',
-    location: 'panoramaHut',
-    status: 'At Hütte Deck (2,200m)',
-    avatar: '🏂',
-  },
-  {
-    id: 'kajti',
-    name: 'Kajti',
-    role: 'Downhill Specialist',
-    color: '#e040fb',
-    location: 'southBowlLift',
-    onEdge: 'e9',
-    edgeProgress: 0.45,
-    status: 'Carving Red Run 4',
-    avatar: '⛷️',
-  },
-  {
-    id: 'patrol',
-    name: 'Ski Patrol #4',
-    role: 'Mountain Rescue / Medic',
-    color: '#ff2d2d',
-    location: 'eagleMid',
-    status: 'Mid-Station Stationed (2,400m)',
-    avatar: '⛑️',
-  },
-];
+const initialNodeId = Object.keys(nodes)[0] || 'mountainBase';
+
+export const DEFAULT_ACCOUNTS = [{
+  id: 'operator',
+  name: 'Operator',
+  role: 'Alpine Skier',
+  color: '#39ff14',
+  location: initialNodeId,
+  avatar: '🎿',
+}];
 
 export function loadAccounts() {
   try {
@@ -52,7 +22,14 @@ export function loadAccounts() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          const profiles = parsed.filter(account => account?.isCustom);
+          if (profiles.length > 0) {
+            if (profiles.length !== parsed.length) {
+              localStorage.setItem('apex_accounts', JSON.stringify(profiles));
+            }
+            return profiles;
+          }
+          localStorage.setItem('apex_accounts', JSON.stringify(DEFAULT_ACCOUNTS));
         }
       }
     }
@@ -63,9 +40,25 @@ export function loadAccounts() {
 }
 
 let availableAccounts = loadAccounts();
-let currentAccountId = (typeof localStorage !== 'undefined' && localStorage.getItem('apex_active_account'))
-  || availableAccounts[0]?.id
-  || 'benedek';
+let savedAccountId = null;
+try {
+  if (typeof localStorage !== 'undefined') {
+    savedAccountId = localStorage.getItem('apex_active_account');
+  }
+} catch (e) {
+  console.warn('Failed to load active account from storage', e);
+}
+let currentAccountId = availableAccounts.some(account => account.id === savedAccountId)
+  ? savedAccountId
+  : availableAccounts[0]?.id;
+
+if (typeof localStorage !== 'undefined' && currentAccountId) {
+  try {
+    localStorage.setItem('apex_active_account', currentAccountId);
+  } catch (e) {
+    console.warn('Failed to update active account in storage', e);
+  }
+}
 
 export function saveAccounts() {
   try {
@@ -149,6 +142,9 @@ export function createProfile({ name, role, location, avatar, color, autoLogin =
     isCustom: true,
   };
 
+  if (autoLogin) {
+    availableAccounts = availableAccounts.filter(account => account.isCustom);
+  }
   availableAccounts.push(newAcc);
   saveAccounts();
 
@@ -197,6 +193,10 @@ export function switchAccount(accId, customName, customSector, customRole, custo
 
   const match = availableAccounts.find(a => a.id === accId);
   if (match) {
+    if (match.isCustom) {
+      availableAccounts = availableAccounts.filter(account => account.isCustom);
+      saveAccounts();
+    }
     currentAccountId = match.id;
     try {
       localStorage.setItem('apex_active_account', currentAccountId);
@@ -217,4 +217,3 @@ export function getAccounts() {
 export function getCurrentAccountId() {
   return currentAccountId;
 }
-

@@ -11,7 +11,7 @@
 
 import { REAL_RESORTS } from './resorts-db.js';
 import { setResortData } from './resort-graph.js';
-import { getAccounts, saveAccounts } from './accounts.js';
+import { getAccounts, saveAccounts, syncSquadState } from './accounts.js';
 
 let _activeResortId = (typeof localStorage !== 'undefined' && localStorage.getItem('apex_current_resort')) || 'mountApex';
 
@@ -799,12 +799,15 @@ export function applyResort(resortData) {
     const slotMap = [summitNode, midNode, mid2Node, baseNode];
 
     accounts.forEach((acc, idx) => {
+      acc.onEdge = null;
+      delete acc.edgeProgress;
       if (!resortData.nodes[acc.location]) {
         acc.location = slotMap[idx % slotMap.length] || summitNode;
       }
     });
 
-    saveAccounts(accounts);
+    saveAccounts();
+    syncSquadState();
   }
 
   return true;

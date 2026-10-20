@@ -33,7 +33,7 @@ APEX splits the screen into a tactical, dark alpine cockpit:
 │  • Live Interactive SVG Ski Resort Graph (8 Nodes)     │  • Real-Time Web Audio Waveform Bars     │
 │  • Color-Coded Runs: Blue (Easy), Red (Mid), Black     │  • 3-State Tap-to-Talk / Interrupt Mic   │
 │  • Dashed Gondolas & Chairlifts (Summit & South Bowl)  │  • Tactical Walkie-Talkie Radio Squelch  │
-│  • Animated Live Squad Radar Dots (You, Renato, Kajti) │  • Live Skier & AI Transcript Log        │
+│  • Animated Live Squad Radar Dots (You & registered teammates) │  • Live Skier & AI Transcript Log │
 │  • Glowing Neon Route Pulse (Dijkstra Traversal)       │  • Active Navigation HUD Card            │
 │  • Interactive Alpine Weather Simulator:               │  • Squad Comms & Telemetry HUD Card      │
 │    [Toggle Blizzard] [Close South Lift] [Ice on Black] │  • Mountain Telemetry Card (-8°C, Wind)  │
@@ -53,11 +53,7 @@ Designed specifically for alpine gloves and one-button helmet triggers:
 - **Hands-Free Fallback**: If the skier stops talking and stays silent for 3.8s, the system automatically dispatches the message hands-free.
 
 ### 2. 🔤 Fuzzy Phonetic Name Matching (Hungarian & Non-English Tolerance)
-Because speech recognition utilizes an English acoustic model (`en-US`), non-English and Hungarian names are often phonetically distorted:
-- *"Kajti"* is often transcribed as *"Kaity"*, *"Kitey"*, *"Katie"*, *"Kyte"*, or *"Kity"*.
-- *"Renátó"* is transcribed as *"Renault"*, *"Renado"*, *"Renate"*, or *"Ranato"*.
-- *"Benedek"* is transcribed as *"Benedict"*, *"Benedec"*, or *"Benedick"*.
-- *"Ski Patrol"* is transcribed as *"Petrol"*, *"hegyimentő"*, or *"mentők"*.
+Because speech recognition utilizes an English acoustic model (`en-US`), non-English and Hungarian names can be phonetically distorted.
 
 APEX features an integrated **Levenshtein Distance & Phonetic Similarity Engine** (`MountainData.matchBestPerson`):
 - Automatically scans incoming words and phrases against all active skiers on the slope.
@@ -65,16 +61,16 @@ APEX features an integrated **Levenshtein Distance & Phonetic Similarity Engine*
 - Works across **route intercept planning**, **squad comms messaging**, and **member location inquiries**!
 
 ### 3. 🎯 Isolated Squad Member Telemetry (Zero Information Leak)
-When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Kajti?"*):
+When inquiring about a registered teammate (e.g. *"Where is [name]?"* or *"Hol van [name]?"*):
 - The AI responds **strictly with that person's location, altitude, and activity**. It never leaks or mixes in details about other teammates.
 - On the SVG map, **only that person's radar dot** expands with a high-vis pulse (`scale(2.4)`) and their sector node flashes with their assigned color.
 - The `SQUAD COMMS` HUD card displays their dedicated telemetry badge (Sector, Elevation, Activity Status, Transceiver Link: `CH-04 · 100% Signal`).
 
 ### 4. 🧭 Dijkstra Alpine Shortest-Path Navigation
-- Calculates the optimal downhill route across Mount Apex based on run difficulty and live weather constraints.
+- Calculates the optimal downhill route across the active resort based on run difficulty and live weather constraints.
 - **Constraint Avoidance**: Can dynamically avoid black runs (`avoidBlack: true`) or icy black slopes (`avoidIce: true`).
 - **Live Hazard Warnings**: Automatically warns the skier if a route relies on a closed lift or traverses a blizzard sector.
-- **Squad Intercepts**: Plotting a route to a teammate (e.g. *"Route to Kajti"*) dynamically resolves the teammate's current coordinates and computes an intercept course with estimated travel time.
+- **Squad Intercepts**: Plotting a route to a teammate (e.g. *"Route to [name]"*) dynamically resolves the teammate's current coordinates and computes an intercept course with estimated travel time.
 
 ### 5. 📻 Walkie-Talkie Radio Sound Synthesizer (Web Audio API)
 - Zero external MP3 files needed!
@@ -84,14 +80,14 @@ When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Ka
 - Triggers on explicit distress keywords (*"MAYDAY"*, *"SOS"*, *"I crashed, twisted my knee"*, *"Need ski patrol"*).
 - Entire HUD flashes into crimson red emergency beacon mode.
 - Locks mountain GPS coordinates: `45.0921° N, 6.0694° E`.
-- AI speaks calming first-aid instructions while alerting Ski Patrol #4 at Eagle Mid-Station.
+- AI speaks calming first-aid instructions while alerting rescue services.
 - Can be dismissed via voice (*"Cancel SOS"*, *"False alarm, I'm okay"*) or via the dedicated **[Dismiss Emergency Beacon]** HUD button.
 
 ### 7. 👤 Custom Profile Creator & Multi-Skier Ecosystem
 - **Universal Custom Profile Creator**:
-  - Click `[SKIER: Benedek @ Glacier Peak ▾]` in the top bar to open the **Squad Accounts & Profile Creator** modal.
+  - Click the active account in the top bar to open the **Squad Accounts & Profile Creator** modal.
   - **Customizable Attributes**:
-    - **Call Sign / Name**: Any name (e.g. *David*, *Alex*, *Zsófi*).
+    - **Call Sign / Name**: Any name.
     - **Role / Specialty**: (e.g. *Speed Rider*, *Freeride Scout*, *Alpine Medic*).
     - **Mountain Sector**: Choose from all 8 resort nodes from Summit to Base.
     - **Avatar**: Interactive emoji selection (🎿 Skier, 🏂 Boarder, ⛷️ Telemark, ⛑️ Medic, 🏔️ Scout, ⚡ Speed, 🦅 Eagle, 🛷 Sled).
@@ -109,7 +105,7 @@ When inquiring about a specific person (e.g. *"Where is Kajti?"* or *"Hol van Ka
 
 ### 8. 📻 Dedicated Radio Comms Tab & Dynamic Transceiver Logging
 - **HUD Tabs Bar**: Toggle effortlessly between `[VISOR HUD]` (navigation, telemetry, SOS) and `[RADIO COMMS]` (encrypted squad transceiver).
-- **Dynamic Channel Filter Pills**: The transceiver header generates interactive filter buttons for **every registered squad member** (`[📢 ALL SQUAD]`, `[⚡ David]`, `[🏂 Renato]`, `[⛷️ Kajti]`, etc.) with real-time transmission count badges.
+- **Dynamic Channel Filter Pills**: The transceiver header generates interactive filter buttons for **every registered squad member** with real-time transmission count badges.
 - **Per-Profile Channel Logging**: Direct transmissions and incoming replies are isolated to each skier's log.
 - **Individual vs Broadcast Targeting**: Address squad members individually (*"Tell David..."*, *"Radio Alex..."*, *"Szólj Dávidnak..."*) or broadcast to the entire team (*"Tell everyone..."*, *"Broadcast..."*).
 - **Zero Demo Clutter**: Transceiver starts clean with zero fake messages, logging only real user transmissions and contextual replies.
@@ -145,14 +141,12 @@ You can test these commands either by speaking into your microphone (click the m
 
 | Goal | Spoken Command (English or Hungarian) | UI Trigger / Result |
 |---|---|---|
-| **Track Kajti** | *"Where is Kajti?"* / *"Hol van Kajti?"* / *"Kajti"* | Pulses Kajti's purple dot; shows Kajti's telemetry card |
-| **Track Renato** | *"Where is Renato?"* / *"Renato hol van?"* / *"Renato"* | Pulses Renato's orange dot; displays Panorama Hut deck status |
-| **Track Patrol** | *"Where is Ski Patrol?"* / *"Hol van a hegyimentő?"* | Pulses Patrol red dot at Eagle Mid-Station |
-| **Route to Teammate** | *"How do I get to Kajti?"* / *"Route to Renato"* | Highlights neon green path; shows ETA & difficulty |
+| **Track a Teammate** | *"Where is [name]?"* / *"Hol van [name]?"* | Pulses that registered teammate's map marker and shows their telemetry |
+| **Route to Teammate** | *"How do I get to [name]?"* / *"Route to [name]"* | Highlights the path; shows ETA & difficulty |
 | **Safe Routing** | *"Route me to Panorama Hut avoiding black runs."* | Dijkstra avoids expert slopes, guides via Blue Run 1 & 3 |
-| **Radio Ping / Dispatch** | *"Send a radio message to Renato"* / *"Tell squad we meet at hut"* | Tactical radio check or message dispatch; logs under teammate profile with 2.5s auto-reply |
+| **Radio Ping / Dispatch** | *"Send a radio message to [name]"* / *"Tell squad we meet at hut"* | Tactical radio check or message dispatch; logs under the selected channel with an automatic teammate reply |
 | **Mountain Telemetry** | *"Check conditions."* / *"How is the weather?"* | Reports peak blizzard, wind speed, and lift status |
-| **Emergency SOS** | *"MAYDAY! I crashed off-piste near Avalanche Chute!"* | Triggers crimson HUD mode, locks GPS, alerts Ski Patrol |
+| **Emergency SOS** | *"MAYDAY! I crashed and need rescue!"* | Triggers crimson HUD mode, locks GPS, alerts rescue services |
 | **Cancel SOS** | *"Cancel SOS."* / *"False alarm, I'm fine."* | [Dismiss Emergency Beacon] button restores normal HUD |
 
 ---
@@ -161,12 +155,29 @@ You can test these commands either by speaking into your microphone (click the m
 
 ```
 SÍapp/
-├── index.html                 # Complete tactical layout (Dual panel: Map + HUD)
-├── styles.css                 # Dark alpine HUD styling, neon route stroke, glowing radar dots
+├── index.html                 # Small application shell and view loader
+├── views/                     # Header, dialogs, map, and HUD markup partials
+│   ├── top-bar.html
+│   ├── modals.html
+│   ├── main-shell.html
+│   ├── map-panel.html
+│   └── hud-panel.html
+├── styles.css                 # CSS entry point importing component styles
+├── css/                       # Base, cards, controls, map, alerts, HUD, radio, and profile styles
 ├── README.md                  # Project showcase and usage documentation
 ├── ai.md                      # Complete chronological development & iteration log
 └── js/                        # Modular JavaScript Architecture (ES6 Modules)
-    ├── main.js                # App entry point, bootstrap, event listeners & wiring
+    ├── main.js                # App entry point and startup orchestration
+    ├── app/
+    │   ├── bootstrap.js       # Loads HTML partials before starting the app
+    │   ├── dom.js             # Shared DOM references and transient UI state
+    │   ├── map-ui.js          # Map rendering, simulator controls, and HUD tabs
+    │   ├── events.js          # UI event bindings and modal setup
+    │   ├── route-handlers.js  # Route planning and route HUD updates
+    │   ├── radio-handlers.js  # Squad radio message handling
+    │   ├── safety-handlers.js # Conditions, SOS, and entity lookup handlers
+    │   ├── profile-handlers.js # Squad profile creation and switching
+    │   └── voice-wiring.js    # Connects voice intents to application handlers
     ├── data/
     │   ├── resort-graph.js    # Mountain nodes (huts, peaks, lifts) & trail edges
     │   ├── resort-loader.js   # Real-world ski resort search, image Vision AI & offline CV
@@ -219,4 +230,3 @@ SÍapp/
 ---
 
 *Built with ❤️ for the Hiya Voice AI Challenge.*
-

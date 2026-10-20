@@ -1,0 +1,139 @@
+/* ─── Simulator Buttons ─── */
+.sim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(200, 214, 229, 0.6);
+  background: rgba(26, 34, 54, 0.6);
+  border: 1px solid #1e3a5f;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sim-btn:hover {
+  border-color: #ffb300;
+  color: #ffb300;
+  background: rgba(255, 179, 0, 0.08);
+}
+.sim-btn.active {
+  border-color: #ff2d2d;
+  color: #ff2d2d;
+  background: rgba(255, 45, 45, 0.12);
+  box-shadow: 0 0 12px rgba(255, 45, 45, 0.15);
+}
+.sim-btn.active:hover {
+  background: rgba(255, 45, 45, 0.2);
+}
+
+/* ─── Demo Chips ─── */
+.demo-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(200, 214, 229, 0.7);
+  background: rgba(26, 34, 54, 0.8);
+  border: 1px solid #1e3a5f;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.demo-chip:hover {
+  border-color: #00e5ff;
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.08);
+}
+
+/* ─── Mic Button ─── */
+.mic-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a2236 0%, #111827 100%);
+  border: 2px solid #1e3a5f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+.mic-btn:hover {
+  border-color: #00e5ff;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+}
+.mic-btn.listening {
+  border-color: #ff2d2d;
+  box-shadow: 0 0 25px rgba(255, 45, 45, 0.3);
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 45, 45, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(255, 45, 45, 0.5); }
+}
+.mic-btn.speaking {
+  border-color: #00e5ff;
+  background: linear-gradient(135deg, #092e42 0%, #0d1b2a 100%);
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
+  animation: speakingPulse 1.2s ease-in-out infinite;
+}
+.mic-btn.speaking i {
+  color: #00e5ff !important;
+}
+@keyframes speakingPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 229, 255, 0.3); transform: scale(1); }
+  50% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.7); transform: scale(1.05); }
+}
+
+/* ─── Waveform Visualizer ─── */
+.waveform-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 4px;
+}
+.wave-bar {
+  width: 3px;
+  height: 4px;
+  background: #1e3a5f;
+  border-radius: 2px;
+  transition: height 0.08s ease;
+}
+.waveform-active .wave-bar {
+  background: linear-gradient(to top, #00e5ff, #39ff14);
+  animation: waveAnim 0.4s ease-in-out infinite alternate;
+}
+.waveform-active .wave-bar:nth-child(2n)   { animation-delay: 0.05s; }
+.waveform-active .wave-bar:nth-child(3n)   { animation-delay: 0.10s; }
+.waveform-active .wave-bar:nth-child(5n)   { animation-delay: 0.15s; }
+.waveform-active .wave-bar:nth-child(7n)   { animation-delay: 0.20s; }
+.waveform-active .wave-bar:nth-child(11n)  { animation-delay: 0.08s; }
+.waveform-active .wave-bar:nth-child(13n)  { animation-delay: 0.12s; }
+@keyframes waveAnim {
+  0%   { height: 4px; }
+  100% { height: 24px; }
+}
+
+/* Speaking waveform (AI speaking) */
+.waveform-speaking .wave-bar {
+  background: linear-gradient(to top, #00e5ff, #4fc3f7);
+  animation: waveSpeakAnim 0.3s ease-in-out infinite alternate;
+}
+.waveform-speaking .wave-bar:nth-child(2n)   { animation-delay: 0.04s; }
+.waveform-speaking .wave-bar:nth-child(3n)   { animation-delay: 0.08s; }
+.waveform-speaking .wave-bar:nth-child(5n+1) { animation-delay: 0.12s; }
+@keyframes waveSpeakAnim {
+  0%   { height: 3px; }
+  100% { height: 18px; }
+}
+

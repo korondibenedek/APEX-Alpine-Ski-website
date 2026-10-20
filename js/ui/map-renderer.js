@@ -5,6 +5,20 @@
 import { nodes, edges, simState, activeResortMeta } from '../data/resort-graph.js';
 import { squad } from '../data/accounts.js';
 
+const isMapPoint = ([x, y]) =>
+  Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 900 && y >= 0 && y <= 680;
+
+function getEdgePoints(edge) {
+  const fromNode = nodes[edge.from];
+  const toNode = nodes[edge.to];
+  if (!fromNode || !toNode || !isMapPoint([fromNode.x, fromNode.y]) || !isMapPoint([toNode.x, toNode.y])) {
+    return null;
+  }
+
+  const waypoints = (edge.waypoints || []).filter(point => Array.isArray(point) && isMapPoint(point));
+  return [[fromNode.x, fromNode.y], ...waypoints, [toNode.x, toNode.y]];
+}
+
 export function renderMountainBackdrop() {
   const poly = document.getElementById('mountainSilhouette');
   const altGroup = document.getElementById('altitudeLabelsGroup');
@@ -36,13 +50,8 @@ export function renderEdges(edgesGroup) {
   edgesGroup.innerHTML = '';
 
   for (const edge of edges) {
-    const fromNode = nodes[edge.from];
-    const toNode = nodes[edge.to];
-    const pts = [
-      [fromNode.x, fromNode.y],
-      ...(edge.waypoints || []),
-      [toNode.x, toNode.y],
-    ];
+    const pts = getEdgePoints(edge);
+    if (!pts) continue;
 
     // Build path "d"
     const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
@@ -163,29 +172,25 @@ export function renderSquad(squadGroup) {
     let x, y;
     if (member.currentNode) {
       const node = nodes[member.currentNode];
-      if (!node) continue;
+      if (!node || !isMapPoint([node.x, node.y])) continue;
       x = node.x;
       y = node.y;
     } else if (member.onEdge) {
       const edge = edges.find(e => e.id === member.onEdge);
-      if (edge) {
-        const fromNode = nodes[edge.from];
-        const toNode = nodes[edge.to];
-        const allPts = [
-          [fromNode.x, fromNode.y],
-          ...(edge.waypoints || []),
-          [toNode.x, toNode.y],
-        ];
-        const progress = member.edgeProgress || 0.5;
+      const allPts = edge && getEdgePoints(edge);
+      if (allPts) {
+        const edgeProgress = Number(member.edgeProgress);
+        const progress = Number.isFinite(edgeProgress) ? Math.max(0, Math.min(1, edgeProgress)) : 0.5;
         const totalPts = allPts.length - 1;
-        const segIdx = Math.min(Math.floor(progress * totalPts), totalPts - 1);
-        const segProgress = (progress * totalPts) - segIdx;
+        const progressAlongEdge = progress * totalPts;
+        const segIdx = Math.min(Math.floor(progressAlongEdge), totalPts - 1);
+        const segProgress = progressAlongEdge - segIdx;
         const p0 = allPts[segIdx];
         const p1 = allPts[segIdx + 1];
         x = p0[0] + (p1[0] - p0[0]) * segProgress;
         y = p0[1] + (p1[1] - p0[1]) * segProgress;
       } else {
-        x = 400; y = 400;
+        continue;
       }
     } else {
       continue;
@@ -239,13 +244,8 @@ export function highlightRoute(routeHL, pathEdges) {
   if (!pathEdges || pathEdges.length === 0) return;
 
   for (const edge of pathEdges) {
-    const fromNode = nodes[edge.from];
-    const toNode = nodes[edge.to];
-    const pts = [
-      [fromNode.x, fromNode.y],
-      ...(edge.waypoints || []),
-      [toNode.x, toNode.y],
-    ];
+    const pts = getEdgePoints(edge);
+    if (!pts) continue;
     const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -271,10 +271,10 @@ export function updateMapVisuals(blizzardOvl) {
   });
 
   // Closed lift visual
-  const liftEdge = document.getElementById('edge-l2');
-  if (liftEdge) {
+  for (const edge of edges.filter(item => item.type === 'lift' && item.simControl === 'liftClosed')) {
+    const liftEdge = document.getElementById(`edge-${edge.id}`);
+    if (!liftEdge) continue;
     liftEdge.style.opacity = simState.liftClosed ? '0.2' : '1';
     liftEdge.style.strokeDasharray = simState.liftClosed ? '2 8' : '8 6';
   }
 }
-

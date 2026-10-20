@@ -400,6 +400,7 @@ export const mountApex = {
       "from": "southBowlLift",
       "to": "glacierPeak",
       "name": "Apex Glacier 3S Bahn",
+      "simControl": "liftClosed",
       "difficulty": "blue",
       "type": "lift",
       "weight": 3,

@@ -10,30 +10,44 @@ let isListening = false;
 let micStream = null;
 let analyserNode = null;
 let animFrameId = null;
+let sessionTranscript = '';
+let silenceTimer = null;
+let mediaRecorder = null;
+let recordedAudioChunks = [];
+let currentAudioMimeType = '';
 
-let _sessionTranscript = '';
-let _silenceTimer = null;
+let onTranscript = null;
+let onListeningChange = null;
+let processInputFn = null;
 
-let _onTranscript = null;
-let _onListeningChange = null;
-let _processInputFn = null;
+export function setOnTranscript(fn) {
+  onTranscript = fn;
+}
 
-export function setOnTranscript(fn) { _onTranscript = fn; }
-export function setOnListeningChange(fn) { _onListeningChange = fn; }
-export function setProcessInputHandler(fn) { _processInputFn = fn; }
+export function setOnListeningChange(fn) {
+  onListeningChange = fn;
+}
 
-export function getIsListening() { return isListening; }
+export function setProcessInputHandler(fn) {
+  processInputFn = fn;
+}
+
+export function getIsListening() {
+  return isListening;
+}
 
 export function pauseRecognition() {
-  if (recognition) {
-    try { recognition.abort(); } catch (e) {}
-  }
+  recognition?.abort();
+}
+
+function getMicStatusEl() {
+  return typeof document !== 'undefined' ? document.getElementById('micStatus') : null;
 }
 
 function resetSilenceTimer() {
-  clearTimeout(_silenceTimer);
-  _silenceTimer = setTimeout(() => {
-    if (isListening && _sessionTranscript.trim()) {
+  clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => {
+    if (isListening && sessionTranscript.trim()) {
       finishRecordingAndSubmit();
     }
   }, 3800);
@@ -43,30 +57,39 @@ function isEchoOfAI(transcript) {
   const lastSpokenText = getLastSpokenText();
   const lastSpokenTime = getLastSpokenTime();
   if (!lastSpokenText) return false;
-  const cleanT = transcript.toLowerCase().trim();
-  if (!cleanT) return true;
 
-  if (Date.now() - lastSpokenTime < 3500) {
-    if (cleanT.includes('emergency beacon') || cleanT.includes('transponder locked')
-      || cleanT.includes('support is en route') || cleanT.includes('copy that')
-      || cleanT.includes('route locked') || cleanT.includes('operator switched')
-      || cleanT.includes('ski patrol has been')) {
-      return true;
-    }
-    if (lastSpokenText.includes(cleanT) && cleanT.length > 15) {
-      return true;
-    }
+  const cleanText = transcript.toLowerCase().trim();
+  if (!cleanText) return true;
+
+  if (Date.now() - lastSpokenTime >= 3500) return false;
+
+  const echoPhrases = [
+    'emergency beacon',
+    'transponder locked',
+    'support is en route',
+    'copy that',
+    'route locked',
+    'operator switched',
+    'ski patrol has been',
+  ];
+
+  if (echoPhrases.some(phrase => cleanText.includes(phrase))) {
+    return true;
   }
-  return false;
+
+  return lastSpokenText.includes(cleanText) && cleanText.length > 15;
 }
 
 export function initRecognition() {
   if (typeof window === 'undefined') return;
+
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     console.warn('Speech Recognition not supported in this browser.');
-    const micSt = document.getElementById('micStatus');
-    if (micSt) micSt.textContent = 'Voice API unavailable · Use text box or Chrome/Edge';
+    const micStatus = getMicStatusEl();
+    if (micStatus) {
+      micStatus.textContent = 'Voice API unavailable · Use text box or Chrome/Edge';
+    }
     return;
   }
 
@@ -80,27 +103,25 @@ export function initRecognition() {
     if (isSpeaking()) return;
 
     let interim = '';
-    let sessionFinal = '';
+    let finalResults = '';
 
     for (let i = 0; i < event.results.length; i++) {
-      const res = event.results[i];
-      if (res.isFinal) {
-        sessionFinal += res[0].transcript + ' ';
+      const result = event.results[i];
+      if (result.isFinal) {
+        finalResults += `${result[0].transcript} `;
       } else {
-        interim += res[0].transcript;
+        interim += result[0].transcript;
       }
     }
 
-    const combined = (sessionFinal + ' ' + interim).replace(/\s+/g, ' ').trim();
-    _sessionTranscript = combined;
+    const combined = `${finalResults} ${interim}`.replace(/\s+/g, ' ').trim();
+    sessionTranscript = combined;
 
-    const micSt = document.getElementById('micStatus');
-    if (micSt && isListening && !isSpeaking()) {
-      if (combined) {
-        micSt.textContent = '🎙️ "' + combined + '" · Tap mic to send';
-      } else {
-        micSt.textContent = '🔴 RECORDING… Speak now (Tap mic to send)';
-      }
+    const micStatus = getMicStatusEl();
+    if (micStatus && isListening && !isSpeaking()) {
+      micStatus.textContent = combined
+        ? `🎙️ "${combined}" · Tap mic to send`
+        : '🔴 RECORDING… Speak now (Tap mic to send)';
     }
 
     if (combined) {
@@ -110,19 +131,24 @@ export function initRecognition() {
 
   recognition.onerror = (event) => {
     if (event.error === 'no-speech' || event.error === 'aborted') return;
+
     console.warn('Speech recognition error:', event.error);
-    const micSt = document.getElementById('micStatus');
+    const micStatus = getMicStatusEl();
+
     if (event.error === 'network') {
-      if (micSt) micSt.textContent = 'Network speech service blocked · Use text box or Chrome';
+      if (micStatus) micStatus.textContent = 'Network speech service blocked · Use text box or Chrome';
     } else if (event.error === 'not-allowed') {
-      if (micSt) micSt.textContent = 'Mic permission denied in browser settings';
+      if (micStatus) micStatus.textContent = 'Mic permission denied in browser settings';
     }
+
     stopListening();
   };
 
   recognition.onend = () => {
     if (isListening && !isSpeaking()) {
-      try { recognition.start(); } catch (e) {}
+      try {
+        recognition.start();
+      } catch {}
     }
   };
 }
@@ -137,44 +163,46 @@ function startWaveformViz(stream) {
   const bars = document.querySelectorAll('#waveform .wave-bar');
   const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
 
-  function draw() {
+  const draw = () => {
     analyserNode.getByteFrequencyData(dataArray);
-    bars.forEach((bar, i) => {
-      const idx = Math.min(i, dataArray.length - 1);
-      const val = dataArray[idx] / 255;
-      bar.style.height = `${Math.max(4, val * 26)}px`;
+    bars.forEach((bar, index) => {
+      const value = dataArray[Math.min(index, dataArray.length - 1)] / 255;
+      bar.style.height = `${Math.max(4, value * 26)}px`;
     });
     animFrameId = requestAnimationFrame(draw);
-  }
+  };
+
   draw();
 }
 
 function stopWaveformViz() {
-  if (animFrameId) cancelAnimationFrame(animFrameId);
-  animFrameId = null;
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+
   document.querySelectorAll('#waveform .wave-bar').forEach(bar => {
     bar.style.height = '4px';
   });
 }
 
-let _mediaRecorder = null;
-let _recordedAudioChunks = [];
-let _currentAudioMimeType = '';
-
 export function getSupportedAudioMimeType() {
   if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') return '';
+
   const candidates = [
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/ogg;codecs=opus',
     'audio/mp4',
-    'audio/wav'
+    'audio/wav',
   ];
-  for (const c of candidates) {
-    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) {
-      return c;
+
+  for (const candidate of candidates) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidate)) {
+      return candidate;
     }
   }
+
   return '';
 }
 
@@ -182,10 +210,10 @@ export async function startListening() {
   if (isListening) return;
   if (isSpeaking()) cancelSpeech();
 
-  _sessionTranscript = '';
-  clearTimeout(_silenceTimer);
-  _silenceTimer = null;
-  _recordedAudioChunks = [];
+  sessionTranscript = '';
+  clearTimeout(silenceTimer);
+  silenceTimer = null;
+  recordedAudioChunks = [];
 
   if (!recognition) initRecognition();
 
@@ -193,74 +221,82 @@ export async function startListening() {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     startWaveformViz(micStream);
 
-    _currentAudioMimeType = getSupportedAudioMimeType();
+    currentAudioMimeType = getSupportedAudioMimeType();
     try {
-      _mediaRecorder = new MediaRecorder(micStream, _currentAudioMimeType ? { mimeType: _currentAudioMimeType } : undefined);
-      _mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          _recordedAudioChunks.push(e.data);
+      mediaRecorder = new MediaRecorder(
+        micStream,
+        currentAudioMimeType ? { mimeType: currentAudioMimeType } : undefined
+      );
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedAudioChunks.push(event.data);
         }
       };
-      _mediaRecorder.start(100);
-    } catch (mrErr) {
-      console.warn('MediaRecorder not available or failed:', mrErr);
-      _mediaRecorder = null;
+      mediaRecorder.start(100);
+    } catch (error) {
+      console.warn('MediaRecorder not available or failed:', error);
+      mediaRecorder = null;
     }
-  } catch (err) {
-    console.warn('Microphone access denied:', err);
+  } catch (error) {
+    console.warn('Microphone access denied:', error);
   }
 
   isListening = true;
   document.getElementById('waveform')?.classList.add('waveform-active');
-  if (_onListeningChange) _onListeningChange(true);
+  onListeningChange?.(true);
 
   try {
     recognition?.start();
-  } catch (e) {}
+  } catch {}
 }
 
 export function stopListening() {
   if (!isListening) return;
+
   isListening = false;
+  clearTimeout(silenceTimer);
+  silenceTimer = null;
 
-  clearTimeout(_silenceTimer);
-  _silenceTimer = null;
+  try {
+    recognition?.stop();
+  } catch {}
 
-  try { recognition?.stop(); } catch (e) {}
-
-  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
-    try { _mediaRecorder.stop(); } catch (e) {}
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try {
+      mediaRecorder.stop();
+    } catch {}
   }
 
   if (micStream) {
-    micStream.getTracks().forEach(t => t.stop());
+    micStream.getTracks().forEach(track => track.stop());
     micStream = null;
   }
+
   stopWaveformViz();
   document.getElementById('waveform')?.classList.remove('waveform-active');
-  if (_onListeningChange) _onListeningChange(false);
+  onListeningChange?.(false);
 }
 
 export function finishRecordingAndSubmit() {
-  clearTimeout(_silenceTimer);
-  _silenceTimer = null;
+  clearTimeout(silenceTimer);
+  silenceTimer = null;
 
-  const spokenText = _sessionTranscript.trim();
-  _sessionTranscript = '';
+  const spokenText = sessionTranscript.trim();
+  sessionTranscript = '';
 
-  const chunks = [..._recordedAudioChunks];
-  _recordedAudioChunks = [];
-  const mimeType = _currentAudioMimeType || 'audio/webm';
+  const chunks = [...recordedAudioChunks];
+  recordedAudioChunks = [];
+  const mimeType = currentAudioMimeType || 'audio/webm';
   const audioBlob = chunks.length > 0 ? new Blob(chunks, { type: mimeType }) : null;
 
   stopListening();
 
   if (!spokenText && (!audioBlob || audioBlob.size < 500)) {
-    const micSt = document.getElementById('micStatus');
-    if (micSt) micSt.textContent = 'No speech detected · Tap to talk';
+    const micStatus = getMicStatusEl();
+    if (micStatus) micStatus.textContent = 'No speech detected · Tap to talk';
     setTimeout(() => {
-      if (!isListening && !isSpeaking() && micSt) {
-        micSt.textContent = 'TAP TO TALK · or use prompts above';
+      if (!isListening && !isSpeaking() && micStatus) {
+        micStatus.textContent = 'TAP TO TALK · or use prompts above';
       }
     }, 1800);
     return;
@@ -270,40 +306,33 @@ export function finishRecordingAndSubmit() {
     return;
   }
 
-  const payload = {
-    text: spokenText,
-    audioBlob,
-    mimeType
-  };
+  const payload = { text: spokenText, audioBlob, mimeType };
 
-  if (_processInputFn) {
-    _processInputFn(payload);
-  } else if (_onTranscript && spokenText) {
-    _onTranscript(spokenText);
+  if (processInputFn) {
+    processInputFn(payload);
+  } else if (onTranscript && spokenText) {
+    onTranscript(spokenText);
   }
 }
 
 export function toggleListening() {
-  // 1. If AI is speaking, clicking immediately silences the AI!
   if (isSpeaking()) {
     cancelSpeech();
-    const micSt = document.getElementById('micStatus');
-    if (micSt) micSt.textContent = 'AI silenced · Tap to talk';
+    const micStatus = getMicStatusEl();
+    if (micStatus) micStatus.textContent = 'AI silenced · Tap to talk';
     setTimeout(() => {
-      if (!isListening && !isSpeaking() && micSt) {
-        micSt.textContent = 'TAP TO TALK · or use prompts above';
+      if (!isListening && !isSpeaking() && micStatus) {
+        micStatus.textContent = 'TAP TO TALK · or use prompts above';
       }
     }, 1500);
     return;
   }
 
-  // 2. If currently recording, clicking stops recording and submits to AI
   if (isListening) {
     finishRecordingAndSubmit();
     return;
   }
 
-  // 3. Otherwise (idle), start recording!
   startListening();
 }
 

@@ -21,7 +21,6 @@ import {
   normalizeText,
   levenshtein,
   similarity,
-  KNOWN_PERSON_ALIASES,
   RESERVED_WORDS,
   matchBestPerson,
   resolveNodeName,
@@ -64,7 +63,6 @@ export {
   normalizeText,
   levenshtein,
   similarity,
-  KNOWN_PERSON_ALIASES,
   RESERVED_WORDS,
   matchBestPerson,
   resolveNodeName,
@@ -122,4 +120,3 @@ export const MountainData = {
   initResort,
   getActiveResortId,
 };
-

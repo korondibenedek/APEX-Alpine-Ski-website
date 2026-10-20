@@ -1,0 +1,65 @@
+/* ─── Transcript Entries ─── */
+.transcript-user {
+  border-left: 2px solid #39ff14;
+  padding-left: 0.5rem;
+}
+.transcript-ai {
+  border-left: 2px solid #00e5ff;
+  padding-left: 0.5rem;
+}
+.transcript-system {
+  border-left: 2px solid #ffb300;
+  padding-left: 0.5rem;
+}
+
+/* ─── Hazard Badge ─── */
+.hazard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.hazard-badge.warning {
+  background: rgba(255, 179, 0, 0.15);
+  border: 1px solid rgba(255, 179, 0, 0.4);
+  color: #ffb300;
+}
+.hazard-badge.danger {
+  background: rgba(255, 45, 45, 0.15);
+  border: 1px solid rgba(255, 45, 45, 0.4);
+  color: #ff2d2d;
+}
+.hazard-badge.ok {
+  background: rgba(57, 255, 20, 0.1);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  color: #39ff14;
+}
+
+/* ─── Difficulty Badge ─── */
+.diff-badge {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  margin-right: 0.2rem;
+  vertical-align: middle;
+}
+.diff-badge.blue   { background: #4fc3f7; }
+.diff-badge.red    { background: #ef5350; }
+.diff-badge.black  { background: #e0e0e0; }
+
+/* ─── Ice Warning Overlay on Map ─── */
+.ice-warning-edge {
+  stroke-dasharray: 4 3 !important;
+  animation: iceShimmer 1.5s ease-in-out infinite alternate;
+}
+@keyframes iceShimmer {
+  0%   { stroke-opacity: 0.5; }
+  100% { stroke-opacity: 1; }
+}
+

@@ -195,9 +195,9 @@ export function renderRadioFeed(radioFeed, elements = {}) {
 
 export function addRadioMessage({
   direction = 'incoming',
-  sender = 'Renato',
-  role = 'Snowboarder',
-  avatar = '🏂',
+  sender = 'Squad Member',
+  role = 'Alpine Skier',
+  avatar = '🎿',
   channel = 'Squad Voice Net',
   recipients = ['All Squad'],
   text = '',
@@ -235,4 +235,3 @@ export function addRadioMessage({
     });
   }
 }
-

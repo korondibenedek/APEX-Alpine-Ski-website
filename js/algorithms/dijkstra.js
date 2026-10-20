@@ -10,8 +10,8 @@ export function buildAdjacency(opts = {}) {
   for (const nid of Object.keys(nodes)) adj[nid] = [];
 
   for (const edge of edges) {
-    // Skip closed lift
-    if (edge.type === 'lift' && edge.id === 'l2' && simState.liftClosed) continue;
+    // Skip lifts disabled by the active simulator controls.
+    if (edge.type === 'lift' && edge.simControl === 'liftClosed' && simState.liftClosed) continue;
 
     // Skip black runs if avoidBlack requested
     if (opts.avoidBlack && edge.difficulty === 'black') continue;
@@ -29,12 +29,8 @@ export function buildAdjacency(opts = {}) {
       w += 4;
     }
 
-    // Runs go downhill (from -> to); lifts go uphill (from -> to)
+    // Runs go downhill and lifts go uphill, following each edge's direction.
     adj[edge.from].push({ to: edge.to, weight: w, edge });
-    // Also allow traversal in reverse for runs (walking uphill penalty)
-    if (edge.type === 'run') {
-      adj[edge.to].push({ to: edge.from, weight: w + 5, edge });
-    }
   }
   return adj;
 }
@@ -95,7 +91,7 @@ export function dijkstra(from, to, opts = {}) {
     if (hasBlack) hazards.push({ type: 'danger', text: 'Ice on Black Runs' });
   }
   if (simState.liftClosed) {
-    const needsSouth = pathEdges.some(e => e.id === 'l2');
+    const needsSouth = pathEdges.some(e => e.simControl === 'liftClosed');
     if (needsSouth) hazards.push({ type: 'danger', text: 'South Lift Closed' });
   }
 
@@ -113,4 +109,3 @@ export function dijkstra(from, to, opts = {}) {
 
   return { path, pathEdges, distance: dist[to], eta, hazards, maxDifficulty: maxDiff };
 }
-

@@ -2,6 +2,9 @@
    groq-client.js — Ultra-Fast Groq Whisper Large v3 Turbo Client
    ═══════════════════════════════════════════════════════════════════ */
 
+import { nodes, activeResortMeta } from '../data/resort-graph.js';
+import { getAccounts } from '../data/accounts.js';
+
 let _groqApiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('apex_groq_key')) || '';
 
 export function setGroqApiKey(key) {
@@ -27,10 +30,10 @@ export async function transcribeWithGroq(audioBlob) {
   formData.append('file', audioBlob, 'recording.webm');
   formData.append('model', 'whisper-large-v3-turbo');
   formData.append('temperature', '0');
-  formData.append(
-    'prompt',
-    'Mount Apex ski resort, Renato, Kajti, Benedek, Ski Patrol, Panorama Hut, Glacier Peak, Ridge Drop, Avalanche Chute, Eagle Mid-Station, South Bowl Lift, Main Valley Base, hütte, gleccser, merre, útvonal.'
-  );
+  const names = getAccounts().filter(account => account.isCustom).map(account => account.name);
+  const locations = Object.values(nodes).map(node => node.name);
+  const promptTerms = [activeResortMeta.name, ...names, ...locations, 'hütte', 'gleccser', 'merre', 'útvonal'];
+  formData.append('prompt', promptTerms.filter(Boolean).join(', '));
 
   const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST',
@@ -48,4 +51,3 @@ export async function transcribeWithGroq(audioBlob) {
   const data = await res.json();
   return (data.text || '').trim();
 }
-

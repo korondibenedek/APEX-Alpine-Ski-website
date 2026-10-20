@@ -1,0 +1,41 @@
+<header class="h-12 flex items-center justify-between px-4 border-b border-hud-border bg-hud-panel/80 backdrop-blur z-50 relative">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-hud-cyan to-hud-green flex items-center justify-center">
+        <i data-lucide="mountain-snow" class="w-5 h-5 text-hud-bg"></i>
+      </div>
+      <span class="font-bold text-lg tracking-wider text-white">APEX</span>
+      <span class="text-xs text-hud-text/60 tracking-widest uppercase ml-1 hidden sm:inline">Hands-Free Alpine Wingman</span>
+    </div>
+    <div class="flex items-center gap-3 text-xs font-mono">
+      <!-- Active Resort / Mountain Switcher Pill -->
+      <button id="btnChangeResort" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-hud-border bg-hud-card/80 hover:border-hud-cyan text-white text-xs transition cursor-pointer" title="Select or Import Real-World Ski Resort">
+        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-hud-cyan"></i>
+        <span class="text-hud-text/40 hidden md:inline">RESORT:</span>
+        <span id="topBarResortName" class="font-bold text-white tracking-wide">Mount Apex</span>
+        <span id="topBarResortAlt" class="text-[10px] text-hud-cyan hidden lg:inline">3,200m</span>
+        <i data-lucide="chevron-down" class="w-3 h-3 text-hud-text/40 ml-0.5"></i>
+      </button>
+
+      <!-- Quick Reset Button for Generated Terrain (visible only when custom terrain is active) -->
+      <button id="btnTopBarDeleteCustomResort" class="hidden px-2 py-1 rounded-lg border border-red-500/40 bg-red-500/15 hover:bg-red-500/30 text-red-300 text-[10px] font-mono transition cursor-pointer items-center gap-1" title="Félrement a generálás? Síterep azonnali törlése és visszaállítása">
+        <i data-lucide="trash-2" class="w-3 h-3 text-red-400"></i>
+        <span class="hidden sm:inline">TÖRLÉS</span>
+      </button>
+
+      <!-- Active Account / Profile Switcher Pill -->
+      <button id="btnSwitchAccount" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-hud-border bg-hud-card/80 hover:border-hud-cyan text-white text-xs transition cursor-pointer" title="Switch Skier Account / Log In">
+        <span class="w-2 h-2 rounded-full bg-hud-green"></span>
+        <span class="text-hud-text/40 hidden md:inline">SKIER:</span>
+        <span id="topBarAccountName" class="font-bold text-white tracking-wide">Operator</span>
+        <span id="topBarAccountLoc" class="text-[10px] text-hud-cyan hidden lg:inline">@ Glacier Peak</span>
+        <i data-lucide="chevron-down" class="w-3 h-3 text-hud-text/40 ml-0.5"></i>
+      </button>
+
+      <span class="text-hud-green flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-hud-green animate-pulse"></span> LIVE</span>
+      <span id="clockDisplay" class="text-hud-text/50">--:--:--</span>
+      <!-- Gemini API Key (optional) -->
+      <button id="btnApiKey" class="text-hud-text/40 hover:text-hud-cyan transition" title="Paste Gemini API Key">
+        <i data-lucide="key" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>

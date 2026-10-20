@@ -161,7 +161,7 @@ export function showSOSCard(sosCard, sosCardBody, location, injury, onDismiss) {
         <div><span class="text-red-300/60">Status:</span></div>
         <div class="text-red-400 font-bold">TRANSMITTING</div>
       </div>
-      <div class="text-[10px] text-red-300/60 mt-1">Ski Patrol notified • Rescue ETA ~8 min</div>
+      <div class="text-[10px] text-red-300/60 mt-1">Rescue services notified • Estimated arrival ~8 min</div>
       <button id="btnDismissSOS" class="w-full mt-2 py-1.5 px-3 text-xs font-mono font-semibold rounded bg-red-900/60 border border-red-500/50 text-red-200 hover:bg-red-800/80 transition flex items-center justify-center gap-1.5 cursor-pointer">
         <i data-lucide="check-circle" class="w-3.5 h-3.5 text-hud-green"></i> Dismiss Emergency Beacon
       </button>
@@ -216,4 +216,3 @@ export function addTranscript(transcriptLog, type, text) {
   transcriptLog.appendChild(entry);
   transcriptLog.scrollTop = transcriptLog.scrollHeight;
 }
-
