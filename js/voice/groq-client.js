@@ -5,15 +5,30 @@
 import { nodes, activeResortMeta } from '../data/resort-graph.js';
 import { getAccounts } from '../data/accounts.js';
 
-let _groqApiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('apex_groq_key')) || '';
+function loadGroqApiKey() {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('apex_groq_key') || '' : '';
+  } catch (error) {
+    console.warn('Failed to load Groq API key from browser storage', error);
+    return '';
+  }
+}
+
+let _groqApiKey = loadGroqApiKey();
 
 export function setGroqApiKey(key) {
-  _groqApiKey = (key || '').trim();
+  const normalizedKey = (key || '').trim();
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('apex_groq_key', _groqApiKey);
+    if (typeof localStorage === 'undefined') throw new Error('Browser storage is unavailable.');
+    if (normalizedKey) {
+      localStorage.setItem('apex_groq_key', normalizedKey);
+    } else {
+      localStorage.removeItem('apex_groq_key');
     }
-  } catch (e) {}
+  } catch (error) {
+    throw new Error(`Could not save the Groq API key in this browser: ${error.message}`);
+  }
+  _groqApiKey = normalizedKey;
 }
 
 export function getGroqApiKey() {

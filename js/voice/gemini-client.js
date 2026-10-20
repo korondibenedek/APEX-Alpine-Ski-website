@@ -7,15 +7,30 @@ import { squad, getActiveAccount, getAccounts } from '../data/accounts.js';
 import { resolveNodeName } from '../data/fuzzy-matcher.js';
 import { aiSpeak } from './speech-tts.js';
 
-let _geminiApiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('apex_gemini_key')) || '';
+function loadGeminiApiKey() {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('apex_gemini_key') || '' : '';
+  } catch (error) {
+    console.warn('Failed to load Gemini API key from browser storage', error);
+    return '';
+  }
+}
+
+let _geminiApiKey = loadGeminiApiKey();
 
 export function setGeminiApiKey(key) {
-  _geminiApiKey = (key || '').trim();
+  const normalizedKey = (key || '').trim();
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('apex_gemini_key', _geminiApiKey);
+    if (typeof localStorage === 'undefined') throw new Error('Browser storage is unavailable.');
+    if (normalizedKey) {
+      localStorage.setItem('apex_gemini_key', normalizedKey);
+    } else {
+      localStorage.removeItem('apex_gemini_key');
     }
-  } catch (e) {}
+  } catch (error) {
+    throw new Error(`Could not save the Gemini API key in this browser: ${error.message}`);
+  }
+  _geminiApiKey = normalizedKey;
 }
 
 export function getGeminiApiKey() {

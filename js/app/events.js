@@ -53,6 +53,15 @@ export function initUI() {
     apiKeyModal?.classList.remove('hidden');
     if (geminiKeyInput) geminiKeyInput.value = VoiceEngine.geminiApiKey || '';
     if (groqKeyInput) groqKeyInput.value = VoiceEngine.groqApiKey || '';
+    const apiKeyStatus = document.querySelector('#apiKeyStatus');
+    if (apiKeyStatus) {
+      const hasSavedKey = VoiceEngine.geminiApiKey || VoiceEngine.groqApiKey;
+      apiKeyStatus.textContent = hasSavedKey
+        ? 'API-kulcs betöltve erről a webhelycímről. Másik port vagy hostname külön tárhelyet használ.'
+        : 'Nincs mentett kulcs ezen a webhelycímen. Másik port vagy hostname külön tárhelyet használ.';
+      apiKeyStatus.classList.remove('text-red-400');
+      apiKeyStatus.classList.add('text-hud-text/60');
+    }
     initIcons();
   });
   btnCloseKeyModal?.addEventListener('click', () => {
@@ -64,8 +73,31 @@ export function initUI() {
   btnSaveKey?.addEventListener('click', () => {
     const gemKey = (geminiKeyInput?.value || '').trim();
     const groqKey = (groqKeyInput?.value || '').trim();
-    VoiceEngine.geminiApiKey = gemKey;
-    VoiceEngine.groqApiKey = groqKey;
+    const errors = [];
+    try {
+      VoiceEngine.geminiApiKey = gemKey;
+    } catch (error) {
+      errors.push(error.message);
+    }
+    try {
+      VoiceEngine.groqApiKey = groqKey;
+    } catch (error) {
+      errors.push(error.message);
+    }
+    const apiKeyStatus = document.querySelector('#apiKeyStatus');
+    if (errors.length) {
+      if (apiKeyStatus) {
+        apiKeyStatus.textContent = `${errors.join(' ')} The key was not saved; check browser storage permissions.`;
+        apiKeyStatus.classList.remove('text-hud-text/60');
+        apiKeyStatus.classList.add('text-red-400');
+      }
+      return;
+    }
+    if (apiKeyStatus) {
+      apiKeyStatus.textContent = 'API-kulcs(ok) elmentve ebben a böngészőben ehhez a webhelycímhez.';
+      apiKeyStatus.classList.remove('text-red-400');
+      apiKeyStatus.classList.add('text-hud-text/60');
+    }
     apiKeyModal?.classList.add('hidden');
 
     if (groqKey && gemKey) {

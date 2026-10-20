@@ -1,11 +1,12 @@
 # 🏔️ APEX — Hands-Free Alpine & Ski Wingman
+
 > **Hiya Voice AI Challenge — Working Prototype**  
 > An ultra-fast, zero-build tactical alpine helmet HUD with real-time voice AI, interactive SVG mountain navigation, Dijkstra pathfinding, and simulated walkie-talkie radio comms.
 
 [![Hiya Voice AI Challenge](https://img.shields.io/badge/Hiya-Voice%20AI%20Challenge-00e5ff?style=for-the-badge)](https://hiya.com)
 [![Stack](https://img.shields.io/badge/Stack-Vanilla%20JS%20%7C%20HTML5%20SVG%20%7C%20Tailwind%20CDN-10b981?style=for-the-badge)](file:///home/benedek/SÍapp/)
 [![Audio API](https://img.shields.io/badge/Audio-Web%20Speech%20API%20%2B%20Web%20Audio%20Synth-f59e0b?style=for-the-badge)](file:///home/benedek/SÍapp/js/voice/index.js)
-[![Zero Build](https://img.shields.io/badge/Build-Zero%20Dependencies%20(No%20npm)-6366f1?style=for-the-badge)](file:///home/benedek/SÍapp/index.html)
+[![Zero Build](<https://img.shields.io/badge/Build-Zero%20Dependencies%20(No%20npm)-6366f1?style=for-the-badge>)](file:///home/benedek/SÍapp/index.html)
 
 ---
 
@@ -14,6 +15,7 @@
 Skiers and alpine snowboarders operate in sub-zero, high-speed environments wearing thick insulated gloves, helmets, and anti-glare goggles. Taking off gloves to fiddle with smartphone touchscreens on a snowy ridge or during a blizzard is dangerous, slow, and causes frozen hands.
 
 **APEX** acts as a **hands-free alpine wingman** integrated directly into the rider's helmet audio system and visor display. Through concise tactical voice commands, riders can:
+
 - Plot downhill routes avoiding black runs or icy sections.
 - Track squad teammates' real-time mountain telemetry without taking their eyes off the slope.
 - Send hands-free walkie-talkie squad messages with automated ETA calculations.
@@ -46,49 +48,59 @@ APEX splits the screen into a tactical, dark alpine cockpit:
 ## ⚡ Key Features
 
 ### 1. 🎙️ 3-State Toggle-to-Talk & Instant AI Silencing
+
 Designed specifically for alpine gloves and one-button helmet triggers:
+
 - **Click 1 (Toggle ON)**: Microphone opens, real-time waveform visualizer activates, and partial speech streams live to the status bar (`🔴 RECORDING… Speak now`).
 - **Click 2 while speaking (Finish & Send)**: Immediately stops recording, shuts the microphone, and submits the speech. The AI speaks its tactical answer in native English, and **automatically toggles OFF (returns to IDLE)** when finished to prevent audio feedback.
 - **Click while AI is answering (Silence AI)**: Instantly interrupts and cancels speech playback (`speechSynthesis.cancel()`), silencing the wingman immediately.
 - **Hands-Free Fallback**: If the skier stops talking and stays silent for 3.8s, the system automatically dispatches the message hands-free.
 
 ### 2. 🔤 Fuzzy Phonetic Name Matching (Hungarian & Non-English Tolerance)
+
 Because speech recognition utilizes an English acoustic model (`en-US`), non-English and Hungarian names can be phonetically distorted.
 
 APEX features an integrated **Levenshtein Distance & Phonetic Similarity Engine** (`MountainData.matchBestPerson`):
+
 - Automatically scans incoming words and phrases against all active skiers on the slope.
 - Resolves to the highest-scoring candidate above threshold ($0.62$).
 - Works across **route intercept planning**, **squad comms messaging**, and **member location inquiries**!
 
 ### 3. 🎯 Isolated Squad Member Telemetry (Zero Information Leak)
-When inquiring about a registered teammate (e.g. *"Where is [name]?"* or *"Hol van [name]?"*):
+
+When inquiring about a registered teammate (e.g. _"Where is [name]?"_ or _"Hol van [name]?"_):
+
 - The AI responds **strictly with that person's location, altitude, and activity**. It never leaks or mixes in details about other teammates.
 - On the SVG map, **only that person's radar dot** expands with a high-vis pulse (`scale(2.4)`) and their sector node flashes with their assigned color.
 - The `SQUAD COMMS` HUD card displays their dedicated telemetry badge (Sector, Elevation, Activity Status, Transceiver Link: `CH-04 · 100% Signal`).
 
 ### 4. 🧭 Dijkstra Alpine Shortest-Path Navigation
+
 - Calculates the optimal downhill route across the active resort based on run difficulty and live weather constraints.
 - **Constraint Avoidance**: Can dynamically avoid black runs (`avoidBlack: true`) or icy black slopes (`avoidIce: true`).
 - **Live Hazard Warnings**: Automatically warns the skier if a route relies on a closed lift or traverses a blizzard sector.
-- **Squad Intercepts**: Plotting a route to a teammate (e.g. *"Route to [name]"*) dynamically resolves the teammate's current coordinates and computes an intercept course with estimated travel time.
+- **Squad Intercepts**: Plotting a route to a teammate (e.g. _"Route to [name]"_) dynamically resolves the teammate's current coordinates and computes an intercept course with estimated travel time.
 
 ### 5. 📻 Walkie-Talkie Radio Sound Synthesizer (Web Audio API)
+
 - Zero external MP3 files needed!
-- Procedurally synthesizes authentic radio squelch bursts (*"Ksscht!"*) using white noise buffers, bandpass filters (2000Hz, Q=0.8), square wave pops (1200Hz), and gain envelopes.
+- Procedurally synthesizes authentic radio squelch bursts (_"Ksscht!"_) using white noise buffers, bandpass filters (2000Hz, Q=0.8), square wave pops (1200Hz), and gain envelopes.
 
 ### 6. 🚨 Emergency Red Alert Mode (SOS / Mayday)
-- Triggers on explicit distress keywords (*"MAYDAY"*, *"SOS"*, *"I crashed, twisted my knee"*, *"Need ski patrol"*).
+
+- Triggers on explicit distress keywords (_"MAYDAY"_, _"SOS"_, _"I crashed, twisted my knee"_, _"Need ski patrol"_).
 - Entire HUD flashes into crimson red emergency beacon mode.
 - Locks mountain GPS coordinates: `45.0921° N, 6.0694° E`.
 - AI speaks calming first-aid instructions while alerting rescue services.
-- Can be dismissed via voice (*"Cancel SOS"*, *"False alarm, I'm okay"*) or via the dedicated **[Dismiss Emergency Beacon]** HUD button.
+- Can be dismissed via voice (_"Cancel SOS"_, _"False alarm, I'm okay"_) or via the dedicated **[Dismiss Emergency Beacon]** HUD button.
 
 ### 7. 👤 Custom Profile Creator & Multi-Skier Ecosystem
+
 - **Universal Custom Profile Creator**:
   - Click the active account in the top bar to open the **Squad Accounts & Profile Creator** modal.
   - **Customizable Attributes**:
     - **Call Sign / Name**: Any name.
-    - **Role / Specialty**: (e.g. *Speed Rider*, *Freeride Scout*, *Alpine Medic*).
+    - **Role / Specialty**: (e.g. _Speed Rider_, _Freeride Scout_, _Alpine Medic_).
     - **Mountain Sector**: Choose from all 8 resort nodes from Summit to Base.
     - **Avatar**: Interactive emoji selection (🎿 Skier, 🏂 Boarder, ⛷️ Telemark, ⛑️ Medic, 🏔️ Scout, ⚡ Speed, 🦅 Eagle, 🛷 Sled).
     - **Radar Color**: Tactical palette (Neon Cyan, Radar Green, Amber Orange, Electric Purple, Rescue Red, Alpine Gold).
@@ -99,17 +111,18 @@ When inquiring about a registered teammate (e.g. *"Where is [name]?"* or *"Hol v
   - **`localStorage` Persistence**: Minden létrehozott profil és bejelentkezési állapot perzisztens a böngésző újratöltésekor.
 - **100% Universal Feature Compatibility**:
   - **Every created profile** receives dynamic SVG radar markers, pulse rings, and name tags.
-  - **Voice Location**: *"Where is [Profile]?"* / *"Hol van [Profile]?"* immediately highlights them, pulses their radar dot, flashes their sector, and shows their telemetry card.
-  - **Intercept Navigation**: *"Route to [Profile]"* plots the Dijkstra shortest path to their location.
-  - **Squad Overview**: Asking *"Where is everyone?"* dynamically compiles all current profiles and elevations into an alpine radio sitrep.
+  - **Voice Location**: _"Where is [Profile]?"_ / _"Hol van [Profile]?"_ immediately highlights them, pulses their radar dot, flashes their sector, and shows their telemetry card.
+  - **Intercept Navigation**: _"Route to [Profile]"_ plots the Dijkstra shortest path to their location.
+  - **Squad Overview**: Asking _"Where is everyone?"_ dynamically compiles all current profiles and elevations into an alpine radio sitrep.
 
 ### 8. 📻 Dedicated Radio Comms Tab & Dynamic Transceiver Logging
+
 - **HUD Tabs Bar**: Toggle effortlessly between `[VISOR HUD]` (navigation, telemetry, SOS) and `[RADIO COMMS]` (encrypted squad transceiver).
 - **Dynamic Channel Filter Pills**: The transceiver header generates interactive filter buttons for **every registered squad member** with real-time transmission count badges.
 - **Per-Profile Channel Logging**: Direct transmissions and incoming replies are isolated to each skier's log.
-- **Individual vs Broadcast Targeting**: Address squad members individually (*"Tell David..."*, *"Radio Alex..."*, *"Szólj Dávidnak..."*) or broadcast to the entire team (*"Tell everyone..."*, *"Broadcast..."*).
+- **Individual vs Broadcast Targeting**: Address squad members individually (_"Tell David..."_, _"Radio Alex..."_, _"Szólj Dávidnak..."_) or broadcast to the entire team (_"Tell everyone..."_, _"Broadcast..."_).
 - **Zero Demo Clutter**: Transceiver starts clean with zero fake messages, logging only real user transmissions and contextual replies.
-- **ASR Normalizer & Alpine Radio Syntax**: Normalizes voice into crisp tactical NATO/Alpine English ending with *"Over."*
+- **ASR Normalizer & Alpine Radio Syntax**: Normalizes voice into crisp tactical NATO/Alpine English ending with _"Over."_
 - **Dynamic Automated Replies**: Address any created or demo profile, and after 2.5s that skier radios back with an authentic reply reflecting their actual sector, avatar, and role!
 - **Replay Audio**: Every transmission card includes a `[REPLAY AUDIO]` button that plays procedural radio squelch and English TTS.
 
@@ -120,13 +133,17 @@ When inquiring about a registered teammate (e.g. *"Where is [name]?"* or *"Hol v
 APEX requires **zero build tools, zero npm packages, and zero bundlers**. Everything runs directly in the browser!
 
 ### Option A: Python HTTP Server (Recommended)
+
 Open a terminal in the project directory and run:
+
 ```bash
 python3 -m http.server 8080
 ```
+
 Then navigate to: **[http://localhost:8080](http://localhost:8080)**
 
 ### Option B: VS Code Live Server / Node Serve
+
 - Right-click `index.html` in VS Code and choose **"Open with Live Server"**, or
 - Run `npx serve .`
 
@@ -139,15 +156,15 @@ Then navigate to: **[http://localhost:8080](http://localhost:8080)**
 
 You can test these commands either by speaking into your microphone (click the mic button), clicking the **Quick Demo Prompt chips**, or typing into the HUD text box:
 
-| Goal | Spoken Command (English or Hungarian) | UI Trigger / Result |
-|---|---|---|
-| **Track a Teammate** | *"Where is [name]?"* / *"Hol van [name]?"* | Pulses that registered teammate's map marker and shows their telemetry |
-| **Route to Teammate** | *"How do I get to [name]?"* / *"Route to [name]"* | Highlights the path; shows ETA & difficulty |
-| **Safe Routing** | *"Route me to Panorama Hut avoiding black runs."* | Dijkstra avoids expert slopes, guides via Blue Run 1 & 3 |
-| **Radio Ping / Dispatch** | *"Send a radio message to [name]"* / *"Tell squad we meet at hut"* | Tactical radio check or message dispatch; logs under the selected channel with an automatic teammate reply |
-| **Mountain Telemetry** | *"Check conditions."* / *"How is the weather?"* | Reports peak blizzard, wind speed, and lift status |
-| **Emergency SOS** | *"MAYDAY! I crashed and need rescue!"* | Triggers crimson HUD mode, locks GPS, alerts rescue services |
-| **Cancel SOS** | *"Cancel SOS."* / *"False alarm, I'm fine."* | [Dismiss Emergency Beacon] button restores normal HUD |
+| Goal                      | Spoken Command (English or Hungarian)                              | UI Trigger / Result                                                                                        |
+| ------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Track a Teammate**      | _"Where is [name]?"_ / _"Hol van [name]?"_                         | Pulses that registered teammate's map marker and shows their telemetry                                     |
+| **Route to Teammate**     | _"How do I get to [name]?"_ / _"Route to [name]"_                  | Highlights the path; shows ETA & difficulty                                                                |
+| **Safe Routing**          | _"Route me to Panorama Hut avoiding black runs."_                  | Dijkstra avoids expert slopes, guides via Blue Run 1 & 3                                                   |
+| **Radio Ping / Dispatch** | _"Send a radio message to [name]"_ / _"Tell squad we meet at hut"_ | Tactical radio check or message dispatch; logs under the selected channel with an automatic teammate reply |
+| **Mountain Telemetry**    | _"Check conditions."_ / _"How is the weather?"_                    | Reports peak blizzard, wind speed, and lift status                                                         |
+| **Emergency SOS**         | _"MAYDAY! I crashed and need rescue!"_                             | Triggers crimson HUD mode, locks GPS, alerts rescue services                                               |
+| **Cancel SOS**            | _"Cancel SOS."_ / _"False alarm, I'm fine."_                       | [Dismiss Emergency Beacon] button restores normal HUD                                                      |
 
 ---
 
@@ -229,4 +246,4 @@ SÍapp/
 
 ---
 
-*Built with ❤️ for the Hiya Voice AI Challenge.*
+_Built with ❤️ for the Hiya Voice AI Challenge._
