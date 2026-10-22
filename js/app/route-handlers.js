@@ -1,4 +1,4 @@
-import { nodes, dijkstra } from '../data/index.js';
+import { nodes, dijkstra, getActiveAccount, resolveNodeName } from '../data/index.js';
 import { aiSpeak } from '../voice/index.js';
 import { highlightRoute, clearRouteHighlight } from '../ui/map-renderer.js';
 import { showNavCard, addTranscript } from '../ui/tactical-hud.js';
@@ -47,23 +47,42 @@ export function showSquadMemberCard(entity) {
 }
 
 // ── Voice Function Handlers ─────────────────────────────────────────
-export async function handlePlanSkiRoute(args) {
+export async function handlePlanSkiRoute(args = {}) {
   const { from, to, avoidBlack, avoidIce, targetPerson } = args;
 
-  if (!to) {
-    const resp = "Roger, but I need a destination. Where should I route you?";
+  const activeAcc = getActiveAccount();
+  const validNodeKeys = Object.keys(nodes);
+  const resolvedFrom = (from && nodes[from])
+    ? from
+    : (activeAcc?.location && nodes[activeAcc.location] ? activeAcc.location : validNodeKeys[0]);
+
+  const resolvedTo = (to && nodes[to])
+    ? to
+    : (to ? resolveNodeName(to) : null);
+
+  if (!resolvedTo || !nodes[resolvedTo]) {
+    const nodeNames = Object.values(nodes).slice(0, 3).map(n => n.name).join(', ');
+    const resp = `Roger, but I need a valid destination. Where should I route you? For example: ${nodeNames || 'the summit or base'}.`;
     addTranscript(transcriptLog, 'ai', resp);
     await aiSpeak(resp);
     return;
   }
 
-  const result = dijkstra(from, to, { avoidBlack, avoidIce });
+  const fromName = nodes[resolvedFrom]?.name || resolvedFrom;
+  const toName = nodes[resolvedTo]?.name || resolvedTo;
 
-  if (!result) {
+  if (resolvedFrom === resolvedTo) {
+    const resp = `You are already at ${toName}, rider! Select another waypoint to calculate a route.`;
+    addTranscript(transcriptLog, 'ai', resp);
+    await aiSpeak(resp);
+    return;
+  }
+
+  const result = dijkstra(resolvedFrom, resolvedTo, { avoidBlack, avoidIce });
+
+  if (!result || !result.path || result.path.length === 0) {
     clearRouteHighlight(routeHL);
     navCard?.classList.add('hidden');
-    const fromName = nodes[from]?.name || from;
-    const toName = nodes[to]?.name || to;
     const resp = `No route found from ${fromName} to ${toName} with your constraints. Try relaxing the avoid-black or avoid-ice filter.`;
     addTranscript(transcriptLog, 'ai', resp);
     await aiSpeak(resp);
@@ -71,11 +90,9 @@ export async function handlePlanSkiRoute(args) {
   }
 
   highlightRoute(routeHL, result.pathEdges);
-  showNavCard(navCard, navCardBody, result, from, to, targetPerson);
+  showNavCard(navCard, navCardBody, result, resolvedFrom, resolvedTo, targetPerson);
 
-  const fromName = nodes[from].name;
-  const toName = nodes[to].name;
-  const viaNames = result.path.slice(1, -1).map(nid => nodes[nid].name);
+  const viaNames = result.path.slice(1, -1).map(nid => nodes[nid]?.name || nid);
   const viaText = viaNames.length > 0 ? ` via ${viaNames.join(', ')}` : '';
   const hazardText = result.hazards.length > 0
     ? ` Heads up: ${result.hazards.map(h => h.text).join(', ')}.`

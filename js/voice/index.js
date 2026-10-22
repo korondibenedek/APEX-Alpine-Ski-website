@@ -44,6 +44,7 @@ import {
   getGroqApiKey,
   transcribeWithGroq,
 } from './groq-client.js';
+import { nodes } from '../data/resort-graph.js';
 
 export {
   ensureAudioCtx,
@@ -144,7 +145,7 @@ export async function processInput(input) {
   }
 
   // If text was captured via Web Speech or Groq, and user wasn't shown the transcript yet:
-  if (text && !groqKey && _onTranscript) {
+  if (text && !groqKey && _onTranscript && typeof input !== 'string') {
     _onTranscript(text);
   }
 
@@ -169,35 +170,36 @@ export async function processInput(input) {
     case 'planSkiRoute': {
       const args = extractRouteArgs(text);
       if (!args.to) {
-        const resp = "I couldn't determine your destination. Could you specify where you'd like to go? For example: Panorama Hut, Eagle Mid-Station, or Main Valley Base.";
+        const sampleNodes = Object.values(nodes).slice(0, 3).map(n => n.name).join(', ');
+        const resp = `I need a destination to calculate your route. Where would you like to go? For example: ${sampleNodes || 'the summit or valley base'}.`;
         if (_onAIResponse) _onAIResponse(resp);
         await aiSpeak(resp);
         return;
       }
-      if (_onFunctionCall) _onFunctionCall('planSkiRoute', args);
+      if (_onFunctionCall) await _onFunctionCall('planSkiRoute', args);
       break;
     }
     case 'pingSquad': {
       const args = extractSquadArgs(text);
-      if (_onFunctionCall) _onFunctionCall('pingSquad', args);
+      if (_onFunctionCall) await _onFunctionCall('pingSquad', args);
       break;
     }
     case 'checkConditions': {
       const args = extractConditionsArgs(text);
-      if (_onFunctionCall) _onFunctionCall('checkConditions', args);
+      if (_onFunctionCall) await _onFunctionCall('checkConditions', args);
       break;
     }
     case 'triggerSOS': {
       const args = extractSOSArgs(text);
-      if (_onFunctionCall) _onFunctionCall('triggerSOS', args);
+      if (_onFunctionCall) await _onFunctionCall('triggerSOS', args);
       break;
     }
     case 'clearSOS': {
-      if (_onFunctionCall) _onFunctionCall('clearSOS', {});
+      if (_onFunctionCall) await _onFunctionCall('clearSOS', {});
       break;
     }
     case 'locateEntity': {
-      if (_onFunctionCall) _onFunctionCall('locateEntity', { query: text });
+      if (_onFunctionCall) await _onFunctionCall('locateEntity', { query: text });
       break;
     }
     default: {

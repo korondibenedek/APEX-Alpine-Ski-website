@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { nodes } from '../data/resort-graph.js';
-import { squad } from '../data/accounts.js';
+import { squad, getActiveAccount } from '../data/accounts.js';
 import { resolveNodeName, matchBestPerson } from '../data/fuzzy-matcher.js';
 
 // Classify voice intent from spoken transcript
@@ -12,21 +12,21 @@ export function classifyIntent(text) {
   if (!lower) return 'unknown';
 
   // 1. Clear SOS / Dismiss beacon
-  if (/\b(cancel\s*sos|clear\s*sos|dismiss\s*sos|dismiss\s*emergency|false\s*alarm|i'?m\s*fine|i'?m\s*ok|minden\s*rendben)\b/i.test(lower)) {
+  if (/\b(cancel\s*sos|clear\s*sos|dismiss\s*sos|dismiss\s*emergency|false\s*alarm|i'?m\s*fine|i'?m\s*ok|minden\s*rendben|riasztas\s*torlese|torold\s*az\s*sos)\b/i.test(lower)) {
     return 'clearSOS';
   }
 
   // 2. Emergency SOS / MAYDAY (highest priority for genuine distress)
   // Ensure "send a message to ski patrol" or "radio ski patrol" is NOT treated as an SOS crash
   const isRadioMessage = /\b(send\s+(?:a\s+|an\s+|the\s+)?(?:radio\s+)?message|send\s+radio|send\s+message|message|radio|tell|küldj\s+(?:egy\s+)?(?:rádió)?üzenetet)\b/i.test(lower);
-  const hasGenuineEmergency = /\b(mayday|emergency|crash|crashed|injured|injury|broken|broke|twisted|bleeding|rescue|help\s*me)\b/i.test(lower);
+  const hasGenuineEmergency = /\b(may\s*[-]?\s*day|mayday|emergency|crash|crashed|injured|injury|broken|broke|twisted|bleeding|rescue|help\s*me|segítség|segitség|segíts|segits|baj\s*van|bajban\s*vagyok|baleset|mentő|mentők|mentőt)\b/i.test(lower);
 
-  const isExplicitDistress = /\b(mayday\s*mayday|mayday|sos|emergency\s*beacon|medical\s*emergency)\b/i.test(lower) ||
-    (!isRadioMessage && /\b(call\s*ski\s*patrol|need\s*ski\s*patrol|send\s*ski\s*patrol|send\s*rescue|need\s*rescue)\b/i.test(lower));
-  const isSevereInjury = /\b(i\s*crashed|crashed\s*off|broke\s*my|twisted\s*my|twisted\s*knee|severe\s*injury|serious\s*injury)\b/i.test(lower);
-  const isEmergencyHelp = /\b(send\s*help|need\s*help|help\s*me)\b/i.test(lower) && /\b(patrol|rescue|crash|crashed|injured|bleeding|broken|chute)\b/i.test(lower);
+  const isExplicitDistress = /\b(may\s*[-]?\s*day(\s*may\s*[-]?\s*day)?|mayday(\s*mayday)?|sos|emergency\s*beacon|medical\s*emergency|vészhelyzet|veszhelyzet)\b/i.test(lower) ||
+    (!isRadioMessage && /\b(call\s*ski\s*patrol|need\s*ski\s*patrol|send\s*ski\s*patrol|send\s*rescue|need\s*rescue|segítség|segitség|segíts|segits|mentőt|hívd\s*a\s*mentőket|kell\s*a\s*mentő)\b/i.test(lower));
+  const isSevereInjury = /\b(i\s*crashed|crashed\s*off|broke\s*my|twisted\s*my|twisted\s*knee|severe\s*injury|serious\s*injury|megsérültem|megserultem|eltört|eltort|kificamodott|összetörtem|osszetortem|lezuhantam|leestem|kicsúsztam|kicsusztam)\b/i.test(lower);
+  const isEmergencyHelp = /\b(send\s*help|need\s*help|help\s*me|segítség|segitség|segíts|segits)\b/i.test(lower) && /\b(patrol|rescue|crash|crashed|injured|bleeding|broken|chute|mentő|baleset|sérülés|hasadék)\b/i.test(lower);
 
-  if ((isExplicitDistress || isSevereInjury || isEmergencyHelp) && (!isRadioMessage || hasGenuineEmergency)) {
+  if ((isExplicitDistress || isSevereInjury || isEmergencyHelp) || (!isRadioMessage && hasGenuineEmergency)) {
     return 'triggerSOS';
   }
 
@@ -43,7 +43,8 @@ export function classifyIntent(text) {
   }
 
   // 4. Route planning (evaluated before general conditions so "route avoiding ice" routes)
-  if (/\b(route|navigate|take\s*me|go\s*to|get\s*to|how\s*(?:do\s*i|doi\s*i|can\s*i|to)\s*(?:get|reach|go|ski)|way\s*to|path\s*to|guide\s*me|direction|avoid|lead\s*me|head\s*to|ski\s*to|interception|tervezz|tervezzünk|útvonal|útvonalat|utvonal|utvonalat|menjünk|vigyél|navigálj|navigalj|vezess|hogyan\s*jutok)\b/i.test(lower)) {
+  // Accommodates phonetic transcription variants, typos like "rout", Hungarian forms, and verbs
+  if (/\b(rout|route|routes|routing|navigate|navigation|navigating|directions?|way\s*to|path\s*to|guide\s*me|take\s*me|go\s*to|get\s*to|lead\s*me|head\s*to|ski\s*to|interception|(?:make|plan|plot)\s+(?:a\s+)?(?:rout|route|path|trip|way)|make\s*(?:a\s+)?route|plan\s*to|how\s*(?:do\s*i|doi\s*i|can\s*i|to)\s*(?:get|reach|go|ski)|avoid|tervezz|tervezzünk|tervezzunk|útvonal|útvonalat|utvonal|utvonalat|útvonalterv|utvonalterv|menjünk|menjunk|vigyél|vigyel|navigálj|navigalj|vezess|hogyan\s*jutok|merre\s*menjek|hova\s*menjek|út\s*a|utat|utiterv|útiterv|navigáció|navigacio)\b/i.test(lower)) {
     return 'planSkiRoute';
   }
 
@@ -93,6 +94,9 @@ export function classifyIntent(text) {
 
 export function extractRouteArgs(text) {
   const lower = (text || '').toLowerCase();
+  const activeAcc = typeof getActiveAccount === 'function' ? getActiveAccount() : null;
+  const validNodeKeys = Object.keys(nodes);
+
   const args = {
     from: null,
     to: null,
@@ -102,7 +106,7 @@ export function extractRouteArgs(text) {
   };
 
   // Detect from
-  const fromMatch = lower.match(/(?:from|at|i'm at|i am at|starting at)\s+([a-z\s]+?)(?:\.|,|$|\band\b|\bto\b|\bavoiding\b)/i);
+  const fromMatch = lower.match(/(?:from|at|i'm at|i am at|starting at)\s+([a-z0-9\s]+?)(?:\.|,|$|\band\b|\bto\b|\bavoiding\b)/i);
   if (fromMatch) {
     args.from = resolveNodeName(fromMatch[1].trim());
   }
@@ -114,26 +118,47 @@ export function extractRouteArgs(text) {
     }
   }
   // Default from: current player location
-  if (!args.from) {
-    args.from = squad.you?.currentNode || Object.keys(nodes)[0];
+  if (!args.from || !nodes[args.from]) {
+    args.from = (activeAcc?.location && nodes[activeAcc.location])
+      ? activeAcc.location
+      : (squad.you?.currentNode && nodes[squad.you.currentNode] ? squad.you.currentNode : validNodeKeys[0]);
   }
 
-  // Detect person in route query using fuzzy matching
-  const personMatch = matchBestPerson(lower);
-  if (personMatch) {
-    args.targetPerson = personMatch.account.name;
-    args.to = resolveNodeName(personMatch.account.id);
+  // ── Step 1: Extract the destination text from "to <destination>" ──
+  // This gives us a precise destination substring (e.g. "operator 2")
+  // instead of matching against the full noisy command text.
+  let destinationText = null;
+  const toMatch = lower.match(/(?:to|toward|towards|reach|get\s*to|lead\s*me\s*to|take\s*me\s*to|ski\s*to|felé|irányába|odáig)\s+([a-z0-9\s]+?)(?:\.|,|$|\band\b|\bavoiding\b)/i);
+  if (toMatch) {
+    destinationText = toMatch[1].trim();
   }
 
-  // Detect explicit destination with "to" or "reach"
-  if (!args.to) {
-    const toMatch = lower.match(/(?:to|toward|towards|reach|get\s*to|lead\s*me\s*to|take\s*me\s*to|ski\s*to|felé|irányába|odáig)\s+([a-z\s]+?)(?:\.|,|$|\band\b|\bavoiding\b)/i);
-    if (toMatch) {
-      args.to = resolveNodeName(toMatch[1].trim());
+  // ── Step 2: Try to resolve destination as a person name first ──
+  // Using the precise captured destination text gives better results
+  // than matching person names against the full command.
+  if (destinationText) {
+    const personMatch = matchBestPerson(destinationText);
+    if (personMatch) {
+      args.targetPerson = personMatch.account.name;
+      // Resolve person's current location on the mountain
+      args.to = resolveNodeName(destinationText);
+    }
+    // If not a person, try as a location/node name
+    if (!args.to) {
+      args.to = resolveNodeName(destinationText);
     }
   }
 
-  // Hungarian destination: "Y-ra", "Y-re", "Y-hoz", "Y-hez", "Y-ba", "Y-be"
+  // ── Step 3: Fallback — try person match on full text ──
+  if (!args.to) {
+    const personMatch = matchBestPerson(lower);
+    if (personMatch) {
+      args.targetPerson = personMatch.account.name;
+      args.to = resolveNodeName(personMatch.account.id);
+    }
+  }
+
+  // ── Step 4: Hungarian destination suffixes ──
   if (!args.to) {
     const huToMatch = lower.match(/(?:az?\s+)?([a-z0-9\s]+?)(?:ra|re|hoz|hez|höz|ba|be)\b/i);
     if (huToMatch) {
@@ -141,7 +166,18 @@ export function extractRouteArgs(text) {
     }
   }
 
-  // If still no destination, scan entire phrase with resolveNodeName
+  // ── Step 5: Strip routing trigger keywords and resolve remainder ──
+  if (!args.to) {
+    const stripped = lower
+      .replace(/\b(?:please\s+)?(?:make\s+(?:a\s+)?rout(?:e)?|plan\s+(?:a\s+)?rout(?:e)?|plot\s+(?:a\s+)?rout(?:e)?|rout(?:e)?|navigate|tervezz(?:ünk)?|útvonal(?:at)?|utvonal(?:at)?|menjünk|vigyél|navigálj|vezess)\b/gi, '')
+      .replace(/\b(?:to|felé|irányába)\b/gi, '')
+      .trim();
+    if (stripped) {
+      args.to = resolveNodeName(stripped);
+    }
+  }
+
+  // ── Step 6: Last resort — scan entire phrase ──
   if (!args.to) {
     args.to = resolveNodeName(lower);
   }
@@ -159,17 +195,23 @@ export function extractRouteArgs(text) {
 
 export function extractSOSArgs(text) {
   const lower = (text || '').toLowerCase();
-  let location = 'avalancheChute';
-  const loc = resolveNodeName(lower);
-  if (loc) location = loc;
+  const activeAcc = typeof getActiveAccount === 'function' ? getActiveAccount() : null;
+  const validNodeKeys = Object.keys(nodes);
 
-  let injury = 'unknown injury';
-  if (/knee/i.test(lower)) injury = 'twisted knee';
-  else if (/leg/i.test(lower)) injury = 'leg injury';
-  else if (/arm/i.test(lower)) injury = 'arm injury';
-  else if (/head/i.test(lower)) injury = 'head injury';
-  else if (/back/i.test(lower)) injury = 'back injury';
-  else if (/crash/i.test(lower)) injury = 'crash — assessing injuries';
+  let location = resolveNodeName(lower);
+  if (!location || !nodes[location]) {
+    location = (activeAcc?.location && nodes[activeAcc.location])
+      ? activeAcc.location
+      : (squad.you?.currentNode && nodes[squad.you.currentNode] ? squad.you.currentNode : validNodeKeys[0]);
+  }
+
+  let injury = 'crash — assessing injuries';
+  if (/knee|térd/i.test(lower)) injury = 'twisted knee';
+  else if (/leg|láb/i.test(lower)) injury = 'leg injury';
+  else if (/arm|kar/i.test(lower)) injury = 'arm injury';
+  else if (/head|fej/i.test(lower)) injury = 'head injury';
+  else if (/back|hát/i.test(lower)) injury = 'back injury';
+  else if (/crash|baleset|ütközés|estem/i.test(lower)) injury = 'crash — assessing injuries';
 
   return { location, injury };
 }
@@ -182,4 +224,3 @@ export function extractConditionsArgs(text) {
   if (/south.*lift|bowl lift/i.test(lower)) sector = 'South Bowl Lift';
   return { sector };
 }
-

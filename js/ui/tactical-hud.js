@@ -49,30 +49,34 @@ export function showNavCard(navCard, navCardBody, result, from, to, targetPerson
 
   const fromNode = nodes[from];
   const toNode = nodes[to];
-  const destinationTitle = targetPerson ? `${toNode.name} (${targetPerson})` : toNode.name;
+  const fromName = fromNode ? fromNode.name : (from || 'Start Point');
+  const toName = toNode ? toNode.name : (to || 'Destination');
+  const destinationTitle = targetPerson ? `${toName} (${targetPerson})` : toName;
 
-  const stepsHtml = result.path.map((nid, i) => {
+  const stepsHtml = (result.path || []).map((nid, i) => {
     const n = nodes[nid];
+    const nName = n ? n.name : nid;
+    const nAlt = n && n.altitude ? `(${n.altitude}m)` : '';
     const isFirst = i === 0;
     const isLast = i === result.path.length - 1;
     const marker = isFirst ? '🏁' : isLast ? '🎯' : '→';
-    return `<span class="text-xs font-mono">${marker} ${n.name} <span class="text-hud-text/40">(${n.altitude}m)</span></span>`;
+    return `<span class="text-xs font-mono">${marker} ${nName} <span class="text-hud-text/40">${nAlt}</span></span>`;
   }).join('<br>');
 
-  const hazardsHtml = result.hazards.length > 0
+  const hazardsHtml = (result.hazards && result.hazards.length > 0)
     ? result.hazards.map(h => `<span class="hazard-badge ${h.type === 'danger' ? 'danger' : 'warning'}">${h.text}</span>`).join(' ')
     : '<span class="hazard-badge ok">No hazards</span>';
 
   navCardBody.innerHTML = `
     <div class="space-y-2">
       <div class="flex items-center justify-between text-xs">
-        <span class="font-semibold text-white">${fromNode.name} → ${destinationTitle}</span>
-        <span class="text-hud-cyan font-mono">ETA ~${result.eta} min</span>
+        <span class="font-semibold text-white">${fromName} → ${destinationTitle}</span>
+        <span class="text-hud-cyan font-mono">ETA ~${result.eta || 0} min</span>
       </div>
       <div class="flex items-center gap-2 text-xs">
         <span class="text-hud-text/50">Max Difficulty:</span>
-        <span class="diff-badge ${result.maxDifficulty}"></span>
-        <span class="text-white capitalize">${result.maxDifficulty}</span>
+        <span class="diff-badge ${result.maxDifficulty || 'blue'}"></span>
+        <span class="text-white capitalize">${result.maxDifficulty || 'blue'}</span>
       </div>
       <div class="flex flex-wrap gap-1">${hazardsHtml}</div>
       <div class="bg-hud-bg/50 rounded-lg p-2 mt-1">${stepsHtml}</div>
@@ -144,7 +148,8 @@ export function showSOSCard(sosCard, sosCardBody, location, injury, onDismiss) {
 
   _isSOSActive = true;
   const node = nodes[location];
-  const locName = node ? node.name : location;
+  const locName = node ? node.name : (location || 'Mountain Sector');
+  const injuryDesc = injury || 'crash — assessing injuries';
 
   sosCardBody.innerHTML = `
     <div class="space-y-2">
@@ -153,11 +158,11 @@ export function showSOSCard(sosCard, sosCardBody, location, injury, onDismiss) {
         <div><span class="text-red-300/60">Location:</span></div>
         <div class="text-white">${locName}</div>
         <div><span class="text-red-300/60">Injury:</span></div>
-        <div class="text-white">${injury}</div>
+        <div class="text-white">${injuryDesc}</div>
         <div><span class="text-red-300/60">GPS:</span></div>
         <div class="text-white">45.0921° N, 6.0694° E</div>
         <div><span class="text-red-300/60">Altitude:</span></div>
-        <div class="text-white">${node ? node.altitude + 'm' : 'Unknown'}</div>
+        <div class="text-white">${node ? node.altitude + 'm' : '2100m'}</div>
         <div><span class="text-red-300/60">Status:</span></div>
         <div class="text-red-400 font-bold">TRANSMITTING</div>
       </div>

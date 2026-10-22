@@ -11,6 +11,11 @@ let lastSpokenText = '';
 let lastSpokenTime = 0;
 let onSpeakingChange = null;
 
+// Strong reference to prevent V8 from garbage collecting active utterance during speech
+let activeUtterance = null;
+let chromeKeepAliveTimer = null;
+let speechSafetyTimeout = null;
+
 export function setOnSpeakingChange(fn) {
   onSpeakingChange = fn;
 }
@@ -19,10 +24,10 @@ export function pickBestEnglishVoice() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
 
   const voices = window.speechSynthesis.getVoices();
-  if (!voices.length) return null;
+  if (!voices || !voices.length) return null;
 
   const enVoices = voices.filter(v => /^en[-_]/i.test(v.lang));
-  if (!enVoices.length) return null;
+  const pool = enVoices.length > 0 ? enVoices : voices;
 
   const preferred = [
     'Google US English',
@@ -38,13 +43,13 @@ export function pickBestEnglishVoice() {
   ];
 
   for (const name of preferred) {
-    const match = enVoices.find(v => v.name.includes(name));
+    const match = pool.find(v => v.name && v.name.includes(name));
     if (match) return match;
   }
 
-  return enVoices.find(v => v.lang === 'en-US')
-    || enVoices.find(v => v.lang === 'en-GB')
-    || enVoices[0];
+  return pool.find(v => v.lang === 'en-US')
+    || pool.find(v => v.lang === 'en-GB')
+    || pool[0];
 }
 
 export function initTTSVoices() {
@@ -74,9 +79,18 @@ function speak(text) {
       return;
     }
 
-    window.speechSynthesis.cancel();
+    const cleanText = sanitizeForTTS(text);
+    if (!cleanText) {
+      resolve();
+      return;
+    }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Ensure browser speech engine is active / unpaused
+    try {
+      window.speechSynthesis.resume();
+    } catch {}
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'en-US';
     utterance.rate = 1.05;
     utterance.pitch = 0.95;
@@ -90,8 +104,19 @@ function speak(text) {
     }
 
     activeSpeechResolve = resolve;
+    activeUtterance = utterance;
 
     const finish = () => {
+      if (chromeKeepAliveTimer) {
+        clearInterval(chromeKeepAliveTimer);
+        chromeKeepAliveTimer = null;
+      }
+      if (speechSafetyTimeout) {
+        clearTimeout(speechSafetyTimeout);
+        speechSafetyTimeout = null;
+      }
+      activeUtterance = null;
+
       if (activeSpeechResolve === resolve) {
         activeSpeechResolve = null;
       }
@@ -99,16 +124,56 @@ function speak(text) {
     };
 
     utterance.onend = finish;
-    utterance.onerror = finish;
+    utterance.onerror = (err) => {
+      console.warn('SpeechSynthesis playback ended with status:', err);
+      finish();
+    };
 
-    window.speechSynthesis.speak(utterance);
+    // Chrome 15s freeze watchdog: Chromium pauses long SpeechSynthesisUtterances after ~15s
+    chromeKeepAliveTimer = setInterval(() => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        if (!window.speechSynthesis.speaking) {
+          clearInterval(chromeKeepAliveTimer);
+          chromeKeepAliveTimer = null;
+        } else {
+          try {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          } catch {}
+        }
+      }
+    }, 6000);
+
+    // Safety timeout ensures promise resolves even if the browser drops onend
+    const safetyMs = Math.max(8000, cleanText.length * 120 + 8000);
+    speechSafetyTimeout = setTimeout(finish, safetyMs);
+
+    try {
+      window.speechSynthesis.speak(utterance);
+      // Double resume for Chromium audio state
+      window.speechSynthesis.resume();
+    } catch (e) {
+      console.warn('speechSynthesis.speak call failed:', e);
+      finish();
+    }
   });
 }
 
 export function cancelSpeech() {
+  if (chromeKeepAliveTimer) {
+    clearInterval(chromeKeepAliveTimer);
+    chromeKeepAliveTimer = null;
+  }
+  if (speechSafetyTimeout) {
+    clearTimeout(speechSafetyTimeout);
+    speechSafetyTimeout = null;
+  }
+  activeUtterance = null;
+
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
     } catch {}
   }
 
@@ -139,20 +204,25 @@ export async function aiSpeak(text, pauseRecFn) {
   cancelSpeech();
 
   isSpeakingFlag = true;
-  lastSpokenText = String(text).toLowerCase();
+  lastSpokenText = String(text || '').toLowerCase();
   lastSpokenTime = Date.now();
 
   pauseRecFn?.();
   onSpeakingChange?.(true);
 
   try {
-    await playRadioSquelch();
+    try {
+      await playRadioSquelch();
+    } catch (squelchErr) {
+      console.warn('Radio squelch playback failed:', squelchErr);
+    }
+
     if (!isSpeakingFlag) return;
 
     waveform?.classList.add('waveform-speaking');
     speaker?.classList.remove('hidden');
 
-    await speak(sanitizeForTTS(text));
+    await speak(text);
   } finally {
     waveform?.classList.remove('waveform-speaking');
     speaker?.classList.add('hidden');
@@ -174,4 +244,3 @@ export function getLastSpokenText() {
 export function getLastSpokenTime() {
   return lastSpokenTime;
 }
-

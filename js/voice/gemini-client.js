@@ -223,18 +223,20 @@ export async function processWithGeminiAudio(base64Audio, mimeType, { onFunction
       }
 
       // Normalization of locations
+      const active = getActiveAccount() || squad.you;
+      const fallbackNode = Object.keys(nodes)[0] || 'mountainBase';
+
       if (fnName === 'planSkiRoute') {
-        const active = getActiveAccount() || squad.you;
-        args.from = resolveNodeName(args.from || '') || active?.location || 'glacierPeak';
+        args.from = resolveNodeName(args.from || '') || (active?.location && nodes[active.location] ? active.location : fallbackNode);
         args.to = resolveNodeName(args.to || '') || null;
         args.avoidBlack = args.avoidBlack || false;
         args.avoidIce = args.avoidIce || false;
       }
       if (fnName === 'triggerSOS') {
-        args.location = resolveNodeName(args.location || '') || 'avalancheChute';
+        args.location = resolveNodeName(args.location || '') || (active?.location && nodes[active.location] ? active.location : fallbackNode);
       }
 
-      if (onFunctionCall) onFunctionCall(fnName, args);
+      if (onFunctionCall) await onFunctionCall(fnName, args);
       return true;
     }
   }
@@ -291,18 +293,20 @@ export async function processWithGemini(text, { onFunctionCall, onAIResponse }) 
       const fnName = part.functionCall.name;
       const args = part.functionCall.args || {};
 
+      const active = getActiveAccount() || squad.you;
+      const fallbackNode = Object.keys(nodes)[0] || 'mountainBase';
+
       if (fnName === 'planSkiRoute') {
-        const active = getActiveAccount() || squad.you;
-        args.from = resolveNodeName(args.from || '') || active?.location || 'glacierPeak';
+        args.from = resolveNodeName(args.from || '') || (active?.location && nodes[active.location] ? active.location : fallbackNode);
         args.to = resolveNodeName(args.to || '') || null;
         args.avoidBlack = args.avoidBlack || false;
         args.avoidIce = args.avoidIce || false;
       }
       if (fnName === 'triggerSOS') {
-        args.location = resolveNodeName(args.location || '') || 'avalancheChute';
+        args.location = resolveNodeName(args.location || '') || (active?.location && nodes[active.location] ? active.location : fallbackNode);
       }
 
-      if (onFunctionCall) onFunctionCall(fnName, args);
+      if (onFunctionCall) await onFunctionCall(fnName, args);
       return true;
     }
     if (part.text) {

@@ -23,17 +23,31 @@ export async function handleCheckConditions(args) {
   await aiSpeak(spoken);
 }
 
-export async function handleTriggerSOS(args) {
+export async function handleTriggerSOS(args = {}) {
   const now = Date.now();
-  if (getIsSOSActive() && now - appState.lastSOSTime < 15000) return;
+  if (now - appState.lastSOSTime < 2000) return;
   appState.lastSOSTime = now;
 
-  const { location, injury } = args;
+  const activeAcc = getActiveAccount();
+  const validNodeKeys = Object.keys(nodes);
+  const location = (args?.location && nodes[args.location])
+    ? args.location
+    : (activeAcc?.location && nodes[activeAcc.location] ? activeAcc.location : validNodeKeys[0]);
+  const injury = args?.injury || 'crash — assessing injuries';
+  const locName = nodes[location]?.name || location || 'your current sector';
+
+  if (getIsSOSActive()) {
+    const resp = `Emergency beacon is already active at ${locName}. Transponder locked: 45 point 09 21 North, 6 point 06 94 East. Rescue services have been alerted; estimated arrival is 8 minutes. Keep warm and remain stationary.`;
+    addTranscript(transcriptLog, 'ai', `🚨 ${resp}`);
+    await aiSpeak(resp);
+    return;
+  }
+
   clearRouteHighlight(routeHL);
   showSOSCard(sosCard, sosCardBody, location, injury, handleClearSOS);
 
-  const locName = nodes[location]?.name || location;
-  const resp = `Emergency beacon confirmed at ${locName}. Transponder locked: 45 point 09 21 North, 6 point 06 94 East. Rescue services have been alerted; estimated arrival is 8 minutes. ${injury ? `Reported condition: ${injury}.` : ''} Keep warm and remain stationary. Support is en route.`;
+  const injuryDesc = injury && injury !== 'unknown injury' ? `Reported condition: ${injury}. ` : '';
+  const resp = `Emergency beacon confirmed at ${locName}. Transponder locked: 45 point 09 21 North, 6 point 06 94 East. Rescue services have been alerted; estimated arrival is 8 minutes. ${injuryDesc}Keep warm and remain stationary. Support is en route.`;
 
   addTranscript(transcriptLog, 'ai', `🚨 ${resp}`);
   await aiSpeak(resp);

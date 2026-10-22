@@ -53,11 +53,12 @@ export function similarity(s1, s2) {
 
 // Reserved command and preposition words that must never falsely match skier names
 export const RESERVED_WORDS = new Set([
-  'send', 'radio', 'message', 'tell', 'ping', 'route', 'navigate', 'locate',
-  'find', 'where', 'how', 'who', 'what', 'which', 'when', 'help', 'mayday',
+  'send', 'radio', 'message', 'tell', 'ping', 'route', 'rout', 'plan', 'plot', 'make', 'navigate', 'locate',
+  'find', 'where', 'how', 'who', 'what', 'which', 'when', 'help', 'mayday', 'may', 'day', 'sos',
   'squad', 'team', 'everyone', 'everybody', 'all', 'units', 'to', 'at', 'in', 'on',
   'with', 'from', 'a', 'the', 'is', 'are', 'and', 'that', 'this', 'for', 'of',
-  'kuldj', 'kuldje', 'uzenet', 'radiouzenet', 'szolj', 'mondd', 'uzend', 'hol', 'merre'
+  'kuldj', 'kuldje', 'uzenet', 'radiouzenet', 'szolj', 'mondd', 'uzend', 'hol', 'merre',
+  'segitseg', 'baleset', 'tervezz', 'utvonal'
 ]);
 
 // Compare input text tokens against all registered skiers on the mountain
@@ -65,14 +66,22 @@ export const RESERVED_WORDS = new Set([
 export function matchBestPerson(inputText, minThreshold = 0.65) {
   if (!inputText) return null;
   const clean = normalizeText(inputText);
-  const tokens = clean.split(' ').filter(t => t.length > 1);
-  if (tokens.length === 0) return null;
+  // Keep single digits/short tokens for bigram construction (e.g. "operator 2"),
+  // but filter for single-token matching (min length 2 for standalone words).
+  const allTokens = clean.split(' ').filter(t => t.length >= 1);
+  const longTokens = allTokens.filter(t => t.length > 1);
+  if (allTokens.length === 0) return null;
 
-  // Generate single words and 2-word bigrams from the query
-  const phrases = [...tokens];
-  for (let i = 0; i < tokens.length - 1; i++) {
-    phrases.push(tokens[i] + ' ' + tokens[i + 1]);
+  // Generate phrases: long single tokens + bigrams built from ALL tokens (including digits)
+  const phraseSet = new Set(longTokens);
+  for (let i = 0; i < allTokens.length - 1; i++) {
+    phraseSet.add(allTokens[i] + ' ' + allTokens[i + 1]);
   }
+  // Also add trigrams for three-word names (e.g. "John van Doe")
+  for (let i = 0; i < allTokens.length - 2; i++) {
+    phraseSet.add(allTokens[i] + ' ' + allTokens[i + 1] + ' ' + allTokens[i + 2]);
+  }
+  const phrases = [...phraseSet];
 
   let bestAccount = null;
   let bestScore = 0;
@@ -88,6 +97,11 @@ export function matchBestPerson(inputText, minThreshold = 0.65) {
       ...nameParts,
       ...(acc.aliases || []),
     ]);
+    // Also include the full name with digits (e.g. "operator 2")
+    // so that "operator 2" bigram can match exactly
+    if (baseNorm !== acc.id) {
+      aliases.add(baseNorm);
+    }
 
     // Add common Hungarian case suffixes for each name part
     nameParts.forEach(p => {
@@ -118,7 +132,9 @@ export function matchBestPerson(inputText, minThreshold = 0.65) {
           }
         }
 
-        if (score > bestScore) {
+        // Prefer longer phrase matches (e.g. "operator 2" > "operator")
+        // by boosting multi-word exact matches slightly
+        if (score > bestScore || (score === bestScore && phrase.length > bestMatchedTerm.length)) {
           bestScore = score;
           bestAccount = acc;
           bestMatchedTerm = phrase;
