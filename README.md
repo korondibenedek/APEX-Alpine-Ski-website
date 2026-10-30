@@ -197,7 +197,12 @@ SÍapp/
     │   └── voice-wiring.js    # Connects voice intents to application handlers
     ├── data/
     │   ├── resort-graph.js    # Mountain nodes (huts, peaks, lifts) & trail edges
-    │   ├── resort-loader.js   # Real-world ski resort search, image Vision AI & offline CV
+    │   ├── resort-loader.js   # Resort catalog, active terrain switching & startup restoration
+    │   ├── resort-storage.js  # Custom resort persistence in localStorage
+    │   ├── resort-topology.js # Topology validation and image-file helpers
+    │   ├── resort-generators.js # Procedural single-/dual-peak terrain templates
+    │   ├── resort-image-generator.js # Image Vision AI & offline image analysis
+    │   ├── resort-ai-generator.js # Text-based AI generation with procedural fallback
     │   ├── resorts-db.js      # Unified database registry re-exporting modular resorts
     │   ├── resorts/           # 16+ dedicated real-world Alpine & Carpathian ski resorts
     │   │   ├── murau.js       # Murau — Kreischberg (Rosenkranzhöhe, Kreischbergsee, WM-Arena)
